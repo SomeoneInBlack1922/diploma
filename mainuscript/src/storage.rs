@@ -7,7 +7,7 @@ use crate::helper_types::NameString;
 use crate::config::{self, Config, config_init};
 use crate::object::FsObject;
 
-const OBJECT_DIR_PATH: &'static str = "objects";
+pub const OBJECT_DIR_PATH: &'static str = "objects";
 pub struct Storage{
 }
 impl Storage{
