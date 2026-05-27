@@ -1,0 +1,11 @@
+.logo_view label {
+    font-size: 40px;
+    font-weight: bold;
+}
+.logo_view .logo-base{
+    color: cyan;
+}
+.logo_view .logo-contrast{
+    font-size: 60;
+    color: yellow;
+}

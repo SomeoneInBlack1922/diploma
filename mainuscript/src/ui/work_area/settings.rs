@@ -1,0 +1,33 @@
+use relm4::{gtk::prelude::{BoxExt, WidgetExt}, prelude::*};
+use gtk::{Box, Label};
+pub struct SettingsView;
+
+pub const SETTINGS_ELEMENT_SPACING: i32 = 10;
+
+impl SimpleComponent for SettingsView {
+    type Input = ();
+    type Output = ();
+    type Init = ();
+    type Root = Box;
+    type Widgets = ();
+    fn init_root() -> Self::Root {
+        let root = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .width_request(300)
+            .spacing(SETTINGS_ELEMENT_SPACING)
+            .vexpand(true)
+            .build();
+        root.add_css_class("settings-view");
+        root
+    }
+    fn init(
+        init: Self::Init,
+        root: Self::Root,
+        sender: ComponentSender<Self>,
+    ) -> ComponentParts<Self>
+    {
+        let settings_temp_label = Label::new(Some("SETTINGS"));
+        root.append(&settings_temp_label);
+        ComponentParts { model: SettingsView{}, widgets: () }
+    }
+}

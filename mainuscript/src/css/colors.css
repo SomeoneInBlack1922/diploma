@@ -1,0 +1,18 @@
+light_background {
+    color: eceff4
+}
+dark_background {
+    color: 2e3440
+}
+light_border{
+    color: 88c0d0
+}
+dark_border{
+    color: d8dee9
+}
+light_text{
+    color: black
+}
+dark_text{
+    color: aliceblue
+}

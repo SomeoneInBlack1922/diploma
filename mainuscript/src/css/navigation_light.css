@@ -1,0 +1,12 @@
+.navigation-view {
+    background-color: #eceff4;
+    border-right: 4px solid #88c0d0;
+}
+
+.navigation-view button {
+    color: black;
+}
+
+.navigation-view .settings-chats-separator {
+    background-color: #88c0d0;
+}
