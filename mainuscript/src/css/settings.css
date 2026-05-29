@@ -1,3 +1,11 @@
-.settings-root{
+.settings-root-box{
     background: rgb(64, 0, 64);
+    padding-left: 10px;
+    padding-right: 10px;
+    margin-left: auto;
+}
+.settings-section-label{
+    font-size: 20px;
+    font-weight: bold;
+    text-align: left;
 }

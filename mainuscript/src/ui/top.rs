@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use relm4::SimpleComponent;
 use gtk::{Window, Box as GtkBox};
+use relm4::gtk::Stack;
 use relm4::prelude::*;
 use relm4::gtk;
 use gtk::prelude::*;
@@ -16,7 +17,8 @@ pub struct TopWidgets {
 pub struct TopView{
     bus: Arc<Bus>,
     top_container: GtkBox,
-    current_working_area: GtkBox
+    working_area: GtkBox
+    // working_stack: Stack
 }
 #[derive(Debug)]
 pub enum TopInput{
@@ -47,13 +49,18 @@ impl SimpleComponent for TopView{
         let bus = Arc::new(init);
         //UI
         let top_container = GtkBox::new(gtk::Orientation::Horizontal, 0);
-        let working_area_empty = GtkBox::builder()
+        let working_area = GtkBox::new(gtk::Orientation::Horizontal, 0);
+
+        let empty_working_view = GtkBox::builder()
             .orientation(gtk::Orientation::Vertical)
             .hexpand(true)
             .vexpand(true)
             .build();
-        working_area_empty.add_css_class("working_area_empty");
-        working_area_empty.append(&gtk::Label::new(Some("EMPTY WORKING AREA")));
+
+        empty_working_view.add_css_class("working_area_empty");
+        empty_working_view.append(&gtk::Label::new(Some("EMPTY WORKING AREA")));
+
+        working_area.append(&empty_working_view);
 
         let navigation_bar_connector = NavigationView::builder()
             // .attach_to(&top_container)
@@ -62,15 +69,16 @@ impl SimpleComponent for TopView{
             return TopInput::Navigation(navigation_output)
         });
         top_container.append(navigation_bar_controller.widget());
-        top_container.append(&working_area_empty);
+        top_container.append(&working_area);
 
         root.set_child(Some(&top_container));
 
         ComponentParts {
             model: TopView {
                 bus,
-                top_container: top_container,
-                current_working_area: working_area_empty
+                top_container,
+                // current_working_area: working_area_empty
+                working_area
             },
             widgets: ()
         }
@@ -83,16 +91,17 @@ impl SimpleComponent for TopView{
                     NavigationEvent::Settings => {
                         tracing::info!("requested to open Settings");
                         // Remove previous working area
-                        self.top_container.remove(&self.current_working_area);
+                        let previous_option = self.working_area.first_child();
+                        if let Some(previous) = previous_option{
+                            self.working_area.remove(&previous);
+                        }
                         // Construct settings element
                         let setting_builder = SettingsView::builder();
                         let settings_root = &setting_builder.root;
                         
                         // Add settings wiew to the container
-                        self.top_container.append(settings_root);
-                        // Store settings as current working area
-                        self.current_working_area = settings_root.clone();
-                        setting_builder.launch(());
+                        self.working_area.append(settings_root);
+                        setting_builder.launch(self.bus.clone());
                     },
                     NavigationEvent::Object(_) => {
                         todo!()

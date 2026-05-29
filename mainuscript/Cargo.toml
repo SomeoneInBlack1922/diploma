@@ -11,3 +11,4 @@ figment = { version = "0.10.19", features = ["toml"]}
 relm4 = "0.10.0"
 serde = { version = "1.0.228", features = ["derive"]}
 tracing = "0.1.44"
+url = "2.5.8"
