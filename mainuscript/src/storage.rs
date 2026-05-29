@@ -14,41 +14,32 @@ impl Storage{
     pub fn new() -> Storage{
         Storage {}
     }
-    //Returns collection of names of objects. u64 is for sorting
-    //If fails to load returns Err(String)
-    pub fn get_object_list(&self, config: &Config) -> Result<Vec<(NameString, u64)>, String>{
-        let mut object_folder_iterator: ReadDir;
+    /// Returns collection of names of FsObjects
+    /// If fails to load returns Err(String)
+    pub fn get_object_list(&self, config: &Config) -> Result<Vec<FsObject>, String>{
         self.create_and_populate_storage_dir(config);
-        loop{
-            let read_dir_result = read_dir(&*config.storage_folder.get_value().join(OBJECT_DIR_PATH));
-            if let Ok(read) = read_dir_result {
-                object_folder_iterator = read;
-                break;
-            }
-            // match read_dir_result {
-            //     Ok(read) => {
-                    
-            //     },
-            //     Err(err) => {
-            //         //If storage dir does not eist attempt to crete it 
-            //         if let ErrorKind::NotFound = err.kind() {
-            //             self.create_and_populate_storage_dir(config);
-            //             continue;
-            //         }
-            //         else {
-            //             return Err(err.to_string());
-            //         }
-            //     }
-            // }
-        }
+        let mut out_vec: Vec<FsObject> = Vec::with_capacity(16);
+        let object_folder_iterator = match read_dir(&*config.storage_folder.get_value().join(OBJECT_DIR_PATH)){
+            Ok(iterator) => {iterator},
+            Err(err) => {return Err(format!("Error while opening object storage folder:\n{}", err.to_string()))}
+        };
         for entry in object_folder_iterator{
             // Ingore Errors
             if let Ok(dir_entry) = entry{
-                let fs_object = FsObject::try_from(dir_entry);
+                // Ignore those errors too
+                if let Ok(fs_object) = FsObject::try_from(dir_entry){
+                    out_vec.push(fs_object);
+                }
             }
         }
-        todo!()
+        return Ok(out_vec);
     }
+    pub fn sort_object_list(input: &mut Vec<FsObject>){
+        input.sort_by(|currennt, next|{
+            currennt.name.cmp(&next.name)
+        });
+    }
+    /// This function should not fail if they already exist and other stuff is fine
     pub fn create_and_populate_storage_dir(&self, config: &Config) -> OnFailure<String>{
         let storage_folder_path = &*config.storage_folder.get_value();
         let objects_dir_path = PathBuf::from(storage_folder_path).join(OBJECT_DIR_PATH);

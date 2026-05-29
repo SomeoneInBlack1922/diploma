@@ -1,9 +1,11 @@
 use borsh::{BorshDeserialize, BorshSerialize};
+pub use implementation::*;
 /// Each regular chat has a thread of messages.
 /// There can be multiple threads: at each message user can reprompt model or edit own message
 /// wich creates alternative branch
 
 use crate::helper_types::{AdequateDateTime, NameString, TextString};
+pub mod implementation;
 /// Holds all messages and metadata
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct RegularChat{
@@ -26,5 +28,4 @@ pub struct Message{
     date: AdequateDateTime,
     content: TextString,
     branches: Vec<RegularChatBrench>
-
 }

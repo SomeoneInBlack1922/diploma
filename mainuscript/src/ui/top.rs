@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use relm4::SimpleComponent;
-use gtk::{Window, Box};
+use gtk::{Window, Box as GtkBox};
 use relm4::prelude::*;
 use relm4::gtk;
 use gtk::prelude::*;
@@ -15,8 +15,8 @@ pub struct TopWidgets {
 }
 pub struct TopView{
     bus: Arc<Bus>,
-    top_container: Box,
-    current_working_area: Box
+    top_container: GtkBox,
+    current_working_area: GtkBox
 }
 #[derive(Debug)]
 pub enum TopInput{
@@ -46,8 +46,8 @@ impl SimpleComponent for TopView{
     {
         let bus = Arc::new(init);
         //UI
-        let top_container = Box::new(gtk::Orientation::Horizontal, 0);
-        let working_area_empty = Box::builder()
+        let top_container = GtkBox::new(gtk::Orientation::Horizontal, 0);
+        let working_area_empty = GtkBox::builder()
             .orientation(gtk::Orientation::Vertical)
             .hexpand(true)
             .vexpand(true)
@@ -79,17 +79,22 @@ impl SimpleComponent for TopView{
         match message{
             TopInput::Navigation(navigation_event) => {
                 match navigation_event{
-                    //Need to open settings in working area
+                    // Need to open settings in working area
                     NavigationEvent::Settings => {
                         tracing::info!("requested to open Settings");
-                        //Remove previous working area
+                        // Remove previous working area
                         self.top_container.remove(&self.current_working_area);
-                        //Construct settings element
-                        let settings_view = SettingsView::builder().launch(());
-                        //Add settings wiew to the container
-                        self.top_container.append(settings_view.widget());
+                        // Construct settings element
+                        let setting_builder = SettingsView::builder();
+                        let settings_root = &setting_builder.root;
+                        
+                        // Add settings wiew to the container
+                        self.top_container.append(settings_root);
+                        // Store settings as current working area
+                        self.current_working_area = settings_root.clone();
+                        setting_builder.launch(());
                     },
-                    NavigationEvent::Chat => {
+                    NavigationEvent::Object(_) => {
                         tracing::info!("requested to open chat");
                         tracing::warn!("NOT IMPLEMENTED");
                     }
@@ -98,4 +103,7 @@ impl SimpleComponent for TopView{
         }
     }
     
+}
+fn new_top_container() -> GtkBox{
+    GtkBox::new(gtk::Orientation::Horizontal, 0)
 }

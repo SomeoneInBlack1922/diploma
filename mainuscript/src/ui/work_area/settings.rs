@@ -1,5 +1,5 @@
 use relm4::{gtk::prelude::{BoxExt, WidgetExt}, prelude::*};
-use gtk::{Box, Label};
+use gtk::{Box as GtkBox, Label};
 pub struct SettingsView;
 
 pub const SETTINGS_ELEMENT_SPACING: i32 = 10;
@@ -8,10 +8,10 @@ impl SimpleComponent for SettingsView {
     type Input = ();
     type Output = ();
     type Init = ();
-    type Root = Box;
+    type Root = GtkBox;
     type Widgets = ();
     fn init_root() -> Self::Root {
-        let root = gtk::Box::builder()
+        let root = GtkBox::builder()
             .orientation(gtk::Orientation::Vertical)
             .width_request(300)
             .spacing(SETTINGS_ELEMENT_SPACING)

@@ -1,52 +1,26 @@
 use std::{fmt::Display, fs::{Metadata, DirEntry}, path::{Path, PathBuf}};
 use std::fs::read_dir;
 
-use crate::config::{self, Config};
+use crate::{config::{self, Config}, helper_types::NameString};
 use crate::storage::OBJECT_DIR_PATH;
 
-pub mod regular_chat;
+pub use implementation::*;
 
+pub mod regular_chat;
+pub mod implementation;
+
+#[derive(Debug)]
 pub struct FsObject{
-    object_type: ObjectType,
-    metadata: Metadata,
-    path: PathBuf
-}
-impl TryFrom<DirEntry> for FsObject{
-    type Error = ();
-    fn try_from(dir_entry: DirEntry) -> Result<Self, Self::Error> {
-        let object_type = match ObjectType::try_from(dir_entry.path().as_ref()){
-            Ok(object_type) => {object_type},
-            Err(_) => {return Err(())}
-        };
-        todo!()
-    }
+    pub object_type: ObjectType,
+    pub name: NameString,
+    pub metadata: Metadata,
+    pub path: PathBuf
 }
 #[derive(Debug)]
 pub enum ObjectType{
     RegularChat,
     TextScript
 }
-impl TryFrom<&Path> for ObjectType {
-    type Error = ();
-    fn try_from(path: &Path) -> Result<Self, Self::Error> {
-        let file_extension = match path.extension(){
-            Some(extension_os_str) => {extension_os_str.to_string_lossy()},
-            None => {return Err(());}
-        };
-        match &*file_extension{
-            "regular" => {return Ok(ObjectType::RegularChat)},
-            "textscript" => {return Ok(ObjectType::TextScript)}
-            _ => {return Err(());}
-        }
-    }
-}
-// impl ObjectType{
-//     /// Insert full file name get it's tipe. None if file is not valid
-//     fn try_from_file_path(path: &Path) -> Option<Self>{
-//         dbg!(name);
-//         None
-//     }
-// }
 #[test]
 fn type_try_from() {
     let config: Config = config::config_init().unwrap();
