@@ -44,6 +44,7 @@ impl SimpleComponent for NavigationView{
         let settings_button = gtk::Button::builder()
             .label("Settings")
             .build();
+        settings_button.add_css_class("navigation-settings");
         settings_button.connect_clicked(
             clone!(
                 #[strong] sender,

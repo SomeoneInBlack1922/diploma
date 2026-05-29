@@ -8,13 +8,13 @@ const CSS_TOP: &'static str = include_str!("./css/top.css");
 const CSS_LOGO: &'static str = include_str!("./css/logo.css");
 const CSS_NAVIGATION: &'static str = include_str!("./css/navigation.css");
 
-const CSS_TOP_LIGHT: &'static str = include_str!("./css/top_light.css");
+const CSS_TOP_LIGHT: &'static str = include_str!("./css/light/top_light.css");
 // const CSS_LOGO_LIGHT: &'static str = include_str!("./css/logo.css");
-const CSS_NAVIGATION_LIGHT: &'static str = include_str!("./css/navigation_light.css");
+const CSS_NAVIGATION_LIGHT: &'static str = include_str!("./css/light/navigation_light.css");
 
-const CSS_TOP_DARK: &'static str = include_str!("./css/top_dark.css");
+const CSS_TOP_DARK: &'static str = include_str!("./css/dark/top_dark.css");
 // const CSS_LOGO_DARK: &'static str = include_str!("./css/logo.css");
-const CSS_NAVIGATION_DARK: &'static str = include_str!("./css/navigation_dark.css");
+const CSS_NAVIGATION_DARK: &'static str = include_str!("./css/dark/navigation_dark.css");
 pub struct Css{
     css_light: String,
     css_provider: CssProvider,
