@@ -7,6 +7,7 @@ use crate::css;
 const CSS_TOP: &'static str = include_str!("./css/top.css");
 const CSS_LOGO: &'static str = include_str!("./css/logo.css");
 const CSS_NAVIGATION: &'static str = include_str!("./css/navigation.css");
+const CSS_SETTINGS: &'static str = include_str!("./css/settings.css");
 
 const CSS_TOP_LIGHT: &'static str = include_str!("./css/light/top_light.css");
 // const CSS_LOGO_LIGHT: &'static str = include_str!("./css/logo.css");
@@ -25,7 +26,8 @@ impl Css{
     pub fn new(config: &Config) -> Self{
         let css = String::from(CSS_TOP) + 
             CSS_LOGO + 
-            CSS_NAVIGATION;
+            CSS_NAVIGATION +
+            CSS_SETTINGS;
         let css_light = String::from(CSS_TOP_LIGHT) +
             CSS_LOGO +
             CSS_NAVIGATION_LIGHT;

@@ -13,11 +13,11 @@ impl SimpleComponent for SettingsView {
     fn init_root() -> Self::Root {
         let root = GtkBox::builder()
             .orientation(gtk::Orientation::Vertical)
-            .width_request(300)
-            .spacing(SETTINGS_ELEMENT_SPACING)
+            .spacing(0)
             .vexpand(true)
+            .hexpand(true)
             .build();
-        root.add_css_class("settings-view");
+        root.add_css_class("settings-root");
         root
     }
     fn init(
