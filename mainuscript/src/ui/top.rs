@@ -95,8 +95,7 @@ impl SimpleComponent for TopView{
                         setting_builder.launch(());
                     },
                     NavigationEvent::Object(_) => {
-                        tracing::info!("requested to open chat");
-                        tracing::warn!("NOT IMPLEMENTED");
+                        todo!()
                     }
                 }
             }

@@ -2,6 +2,12 @@
     background-color: #2e3440;
     border-right: 4px solid #88c0d0;
 }
+.navigation-list-view row{
+    padding: 0;
+}
+.navigation-list-view{
+    background-color: #2e3440;
+}
 /* All buttons */
 .navigation-view button{
     color: white;
