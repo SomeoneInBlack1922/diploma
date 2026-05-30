@@ -60,11 +60,7 @@ impl SimpleComponent for SettingsView {
         api_url_row.add_css_class("settings-row");
 
         let api_url_label = Label::new(Some("API URL"));
-        let api_url_entry_box = GtkBox::builder()
-            .spacing(0)
-            .orientation(gtk::Orientation::Vertical)
-            .hexpand(true)
-            .build();
+
         let api_url_entry = Entry::builder()
             .hexpand(true)
             .build();
@@ -90,11 +86,10 @@ impl SimpleComponent for SettingsView {
 
         });
 
-        api_url_entry_box.append(&api_url_entry);
-        api_url_entry_box.append(&api_url_popup);
         api_url_row.append(&api_url_label);
-        api_url_row.append(&api_url_entry_box);
+        api_url_row.append(&api_url_entry);
         root_box.append(&api_url_row);
+        root_box.append(&api_url_popup);
 
 
         // Row 2

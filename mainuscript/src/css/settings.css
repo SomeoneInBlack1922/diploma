@@ -1,5 +1,5 @@
 .settings-root-box{
-    background: rgb(64, 0, 64);
+    background: rgb(0, 64, 0);
     padding-left: 10px;
     padding-right: 10px;
     margin-left: auto;
@@ -8,4 +8,16 @@
     font-size: 20px;
     font-weight: bold;
     text-align: left;
+}
+.settings-root-box entry{
+    background: rgb(0, 16, 0);
+    border-radius: 0;
+    box-shadow: none;
+    outline: none;
+}
+.settings-root-box entry:focus-within{
+    border-color: rgb(0, 255, 0);
+}
+.settings-root-box entry text:focus{
+    border-color: rgb(0, 255, 0);
 }
