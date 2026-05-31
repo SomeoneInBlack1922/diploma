@@ -22,8 +22,11 @@ pub struct Css{
     css_provider_light: CssProvider,
     css_provider_dark: CssProvider
 }
+// impl Default for Css{
+//     fn
+// }
 impl Css{
-    pub fn new(config: &Config) -> Self{
+    pub fn new() -> Self{
         let css = String::from(CSS_TOP) + 
             CSS_LOGO + 
             CSS_NAVIGATION +

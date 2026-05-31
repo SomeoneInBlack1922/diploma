@@ -1,5 +1,56 @@
-.settings-root-box{
+.settings-root button{
+    border-radius: 0;
+    box-shadow: none;
+    outline: none;
+}
+.settings-save-button{
+    background: rgb(125, 125, 0);
+}
+.settings-save-button:hover{
+    background: rgb(64, 64, 0);
+}
+.settings-save-button:active{
+    background: rgb(255, 255, 0);
+}
+.settings-save-button:disabled{
+    background: rgb(0, 16, 16);
+}
+.settings-clear-button{
+    background: rgb(0, 125, 125);
+}
+.settings-clear-button:hover{
+    background: rgb(0, 64, 64);
+}
+.settings-clear-button:active{
+    background: rgb(0, 255, 255);
+}
+.settings-clear-button:disabled{
+    background: rgb(0, 16, 16);
+}
+.settings-root entry{
+    background: rgb(0, 16, 0);
+    border-radius: 0;
+    box-shadow: none;
+    outline: none;
+}
+.settings-root entry{
+    border-color: rgb(125, 125, 125);
+}
+.settings-root entry:focus-within{
+    border-color: rgb(0, 255, 0);
+}
+/* .settings-root entry text:focus{
+    border-color: rgb(0, 255, 0);
+} */
+.settings-entries-container{
+    background: rgb(0, 32, 0);
+    padding-left: 10px;
+    padding-right: 10px;
+    margin-left: auto;
+}
+.settings-control-container{
     background: rgb(0, 64, 0);
+    border-bottom: 5px solid rgb(0, 125, 0);
     padding-left: 10px;
     padding-right: 10px;
     margin-left: auto;
@@ -8,16 +59,4 @@
     font-size: 20px;
     font-weight: bold;
     text-align: left;
-}
-.settings-root-box entry{
-    background: rgb(0, 16, 0);
-    border-radius: 0;
-    box-shadow: none;
-    outline: none;
-}
-.settings-root-box entry:focus-within{
-    border-color: rgb(0, 255, 0);
-}
-.settings-root-box entry text:focus{
-    border-color: rgb(0, 255, 0);
 }

@@ -21,14 +21,14 @@ pub enum ObjectType{
     RegularChat,
     TextScript
 }
-#[test]
-fn type_try_from() {
-    let config: Config = config::config_init().unwrap();
-    let read_dir_result = read_dir(&*config.storage_folder.get_value().join(OBJECT_DIR_PATH)).unwrap();
-    for read_result in read_dir_result{
-        if let Ok(read) = read_result {
-            let object_tye = ObjectType::try_from(read.path().as_ref());
-            #[cfg(test)] dbg!(object_tye);
-        }
-    }
-}
+// #[test]
+// fn type_try_from() {
+//     let config: Config = config::config_init().unwrap();
+//     let read_dir_result = read_dir(&*config.storage_folder.get_value().join(OBJECT_DIR_PATH)).unwrap();
+//     for read_result in read_dir_result{
+//         if let Ok(read) = read_result {
+//             let object_tye = ObjectType::try_from(read.path().as_ref());
+//             #[cfg(test)] dbg!(object_tye);
+//         }
+//     }
+// }

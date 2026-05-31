@@ -1,9 +1,26 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::{Mutex, MutexGuard};
+use borsh::{BorshSerialize, BorshDeserialize};
+
+// #[derive(BorshSerialize, BorshDeserialize)]
+#[derive(Default)]
 pub struct ConfigField<T: Sized + Sync + Debug>{
+    // #[borsh(skip)]
     inner: Mutex<T>,
-    subscribers: HashMap<usize, Box<dyn Fn(&T) + Sync + Send>>,
+    subscribers: HashMap<usize, Box<fn(&T)>>,
+}
+impl<T: Sized + Sync + Debug + BorshSerialize + BorshDeserialize> BorshSerialize for ConfigField<T> {
+    fn serialize<W: std::io::prelude::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        let inner = self.inner.lock().unwrap();
+        T::serialize(&inner, writer)
+    }
+}
+impl<T: Sized + Sync + Debug + BorshSerialize + BorshDeserialize> BorshDeserialize for ConfigField<T>{
+    fn deserialize_reader<R: std::io::prelude::Read>(reader: &mut R) -> std::io::Result<Self> {
+        let deserialized_inner = T::deserialize_reader(reader)?;
+        return Ok(ConfigField::new(deserialized_inner));
+    }
 }
 
 impl<T: Sized + Sync + Debug> ConfigField<T>{
@@ -14,7 +31,7 @@ impl<T: Sized + Sync + Debug> ConfigField<T>{
         // let _lock = self.inner.lock().unwrap();
         return self.inner.lock().expect("get_value in ConfigField");
     }
-    pub fn subscribe(&mut self, callback: Box<dyn Fn(&T) + Send + Sync>) -> usize{
+    pub fn subscribe(&mut self, callback: Box<fn(&T)>) -> usize{
         //Get new free index
         let mut current_len = self.subscribers.len();
         while self.subscribers.contains_key(&current_len) {

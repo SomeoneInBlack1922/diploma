@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::sync::RwLock;
 
 use relm4::SimpleComponent;
 use gtk::{Window, Box as GtkBox};
@@ -15,7 +16,7 @@ pub struct TopWidgets {
     window: Window
 }
 pub struct TopView{
-    bus: Arc<Bus>,
+    bus: Arc<RwLock<Bus>>,
     top_container: GtkBox,
     working_area: GtkBox
     // working_stack: Stack
@@ -46,7 +47,7 @@ impl SimpleComponent for TopView{
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self>
     {
-        let bus = Arc::new(init);
+        let bus = Arc::new(RwLock::new(init));
         //UI
         let top_container = GtkBox::new(gtk::Orientation::Horizontal, 0);
         let working_area = GtkBox::new(gtk::Orientation::Horizontal, 0);

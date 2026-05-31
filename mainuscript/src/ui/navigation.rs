@@ -1,5 +1,5 @@
 
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use relm4::gtk::{ListItemFactory, NoSelection, ScrolledWindow};
 use relm4::gtk::prelude::{BoxExt, WidgetExt};
 use relm4::typed_view::list::{RelmListItem, TypedListView};
@@ -13,7 +13,7 @@ use crate::ui::logo::LogoView;
 
 pub const NAVIGATION_ELEMENT_SPACING: i32 = 5;
 pub struct NavigationView{
-    bus: Arc<Bus>
+    bus: Arc<RwLock<Bus>>
 }
 #[derive(Debug)]
 pub enum NavigationEvent{
@@ -23,7 +23,7 @@ pub enum NavigationEvent{
 impl SimpleComponent for NavigationView{
     type Input = ();
     type Output = NavigationEvent;
-    type Init = Arc<Bus>;
+    type Init = Arc<RwLock<Bus>>;
     type Root = GtkBox;
     type Widgets = ();
     fn init_root() -> Self::Root {
@@ -76,8 +76,7 @@ impl SimpleComponent for NavigationView{
             .build();
         let mut object_view_wrapper: TypedListView<NavigationObjectButton, NoSelection> = TypedListView::new();
         object_view_wrapper.view.add_css_class("navigation-list-view");
-        dbg!(object_view_wrapper.view.vexpands());
-        populate_object_view_wrapper(&scrollable_container, &mut object_view_wrapper, &init, &sender);
+        populate_object_view_wrapper(&scrollable_container, &mut object_view_wrapper, &init.read().unwrap(), &sender);
 
 
         // Assembling root container
@@ -131,7 +130,7 @@ impl RelmListItem for NavigationObjectButton{
 }
 fn populate_object_view_wrapper(container: &ScrolledWindow, wrapper: &mut TypedListView<NavigationObjectButton, NoSelection>, bus: &Bus, sender: &ComponentSender<NavigationView>){
     // Get object list or generate empty on failure
-    let mut object_list = bus.storage.get_object_list(&bus.config).unwrap_or(vec![]);
+    let mut object_list = bus.storage.get_object_list().unwrap_or(vec![]);
     Storage::sort_object_list(&mut object_list);
     if object_list.is_empty(){
         container.set_child(
