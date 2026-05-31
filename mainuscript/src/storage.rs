@@ -1,12 +1,7 @@
-use std::fs::{File, ReadDir, create_dir_all, read_dir};
-use std::path::{Path, PathBuf};
-use std::io::ErrorKind::{self, NotFound};
-use crate::bus::Bus;
+use std::fs::{File, create_dir_all, read_dir};
+use std::path::PathBuf;
+use std::io::ErrorKind::NotFound;
 use crate::helper_types::{OnFailure};
-use crate::helper_types::NameString;
-use crate::config::{self, Config};
-use crate::input_config::InputConfig;
-use crate::ui::work_area::settings::SettingsData;
 use crate::object::FsObject;
 use borsh::{BorshDeserialize, BorshSerialize};
 use colored::Colorize;
@@ -75,7 +70,7 @@ impl Storage{
             Ok(mut file) => {
                 match borsh::from_reader(&mut file) {
                     Ok(config) => config,
-                    Err(err) => {
+                    Err(_) => {
                         println!(
                             "{} {} {}",
                             "Failed to deserialize config from save file".yellow() ,

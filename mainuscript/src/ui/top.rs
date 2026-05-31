@@ -3,23 +3,28 @@ use std::sync::RwLock;
 
 use relm4::SimpleComponent;
 use gtk::{Window, Box as GtkBox};
-use relm4::gtk::Stack;
+use relm4::component::Connector;
 use relm4::prelude::*;
 use relm4::gtk;
 use gtk::prelude::*;
 use crate::ui::navigation::NavigationView;
 use crate::ui::navigation::NavigationEvent;
+use crate::ui::work_area::settings::SettingsInit;
 use crate::ui::work_area::settings::SettingsView;
 use crate::bus::Bus;
 
 pub struct TopWidgets {
     window: Window
 }
+enum Connectors{
+    Empty,
+    Setttings(Connector<SettingsView>)
+}
 pub struct TopView{
     bus: Arc<RwLock<Bus>>,
     top_container: GtkBox,
-    working_area: GtkBox
-    // working_stack: Stack
+    working_area: GtkBox,
+    connector: Connectors
 }
 #[derive(Debug)]
 pub enum TopInput{
@@ -79,12 +84,13 @@ impl SimpleComponent for TopView{
                 bus,
                 top_container,
                 // current_working_area: working_area_empty
-                working_area
+                working_area,
+                connector:  Connectors::Empty
             },
             widgets: ()
         }
     }
-    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>) {
+    fn update(&mut self, message: Self::Input, _: ComponentSender<Self>) {
         match message{
             TopInput::Navigation(navigation_event) => {
                 match navigation_event{
@@ -102,7 +108,12 @@ impl SimpleComponent for TopView{
                         
                         // Add settings wiew to the container
                         self.working_area.append(settings_root);
-                        setting_builder.launch(self.bus.clone());
+                        let setting_connector = setting_builder.launch(SettingsInit{
+                            bus: self.bus.clone(),
+                            highlighted_options: Arc::new(RwLock::new(0)),
+                            init_control_message: "".into()
+                        });
+                        self.connector = Connectors::Setttings(setting_connector)
                     },
                     NavigationEvent::Object(_) => {
                         todo!()

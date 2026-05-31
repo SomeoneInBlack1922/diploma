@@ -60,3 +60,12 @@
     font-weight: bold;
     text-align: left;
 }
+.settings-popup-error{
+    color: red;
+}
+.settings-popup-changed{
+    color: yellow;
+}
+.settings-row-highlighted{
+    outline: 5px dashed orange;
+}
