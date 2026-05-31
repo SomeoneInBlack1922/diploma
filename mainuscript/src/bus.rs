@@ -11,19 +11,19 @@ pub struct Bus{
     pub css: Css,
     pub storage: Storage,
     pub config: Config,
-    pub settings_data: Arc<RwLock<OptionsData>>
+    pub options_data: Arc<RwLock<OptionsData>>
 }
 impl Bus {
     pub fn new(input_config: InputConfig) -> Result<Self, String>{
         let css = Css::new();
         let storage = Storage::new(input_config.storage_folder);
         let config: Config = storage.read_from_file(CONFIG_FILE);
-        let settings_data: Arc<RwLock<OptionsData>> = Arc::new(RwLock::new(storage.read_from_file(SETTINGS_DATA_FILE)));
+        let options_data: Arc<RwLock<OptionsData>> = Arc::new(RwLock::new(storage.read_from_file(SETTINGS_DATA_FILE)));
         Ok(Bus{
             css,
             storage,
             config,
-            settings_data
+            options_data
         })
     }
 }
@@ -31,6 +31,6 @@ impl Bus {
 impl Drop for Bus{
     fn drop(&mut self) {
         self.storage.store_to_file(&self.config, CONFIG_FILE);
-        self.storage.store_to_file(&*self.settings_data.read().unwrap(), SETTINGS_DATA_FILE);
+        self.storage.store_to_file(&*self.options_data.read().unwrap(), SETTINGS_DATA_FILE);
     }
 }

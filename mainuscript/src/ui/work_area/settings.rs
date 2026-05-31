@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, ops::{Deref, DerefMut}, rc::Rc, sync::{Arc, RwLock}};
 
-use relm4::{gtk::{BoolFilter, Button, Orientation::Horizontal, ScrolledWindow, glib::{SendWeakRef, StrV, object::ObjectExt, property::PropertyGet}, prelude::{BoxExt, ButtonExt, EditableExt, EntryBufferExtManual, EntryExt, WidgetExt}}, prelude::*};
+use relm4::{Sender, gtk::{BoolFilter, Button, Orientation::Horizontal, ScrolledWindow, glib::{SendWeakRef, StrV, object::ObjectExt, property::PropertyGet}, prelude::{BoxExt, ButtonExt, EditableExt, EntryBufferExtManual, EntryExt, WidgetExt}}, prelude::*};
 use gtk::{Box as GtkBox, Label, Entry};
 use url::Url;
 
@@ -8,6 +8,7 @@ use borsh::{BorshSerialize, BorshDeserialize};
 
 use crate::{bus::Bus, ui::work_area::settings::selection::{API_KEY, API_URL, Selection, SelectionFlag, SelectionTrait}};
 mod selection;
+mod set;
 fn set_state_label_empty(label: &Label){
     label.set_text("");
     label.set_css_classes(&[]);
@@ -28,6 +29,19 @@ pub struct SettingsView{
 #[derive(BorshSerialize, BorshDeserialize)]
 pub struct OptionsData {
     inner: HashMap<SelectionFlag, OptionsDataKind>
+}
+impl OptionsData {
+    pub fn get_previous_text(&self, flag: SelectionFlag) -> String{
+        let ret = match self.get(&flag){
+            Some(data_kind) => {
+                match data_kind{
+                    OptionsDataKind::String(data) => data
+                }
+            },
+            None => &"".into()
+        };
+        return ret.clone();
+    }
 }
 impl Deref for OptionsData{
     type Target = HashMap<SelectionFlag, OptionsDataKind>;
@@ -131,7 +145,7 @@ impl SimpleComponent for SettingsView {
 
         let option_widgets = create_entry_widgets(
             scroll.clone(),
-            bus.settings_data.clone(), 
+            bus.options_data.clone(), 
             sender.clone(), 
             highlighted_options.clone()
             // init.init_control_message
@@ -199,12 +213,14 @@ impl SimpleComponent for SettingsView {
                 let bus_ref = self.bus.read().unwrap();
                 let new_option_widgets = create_entry_widgets(
                     new_scroll.clone(),
-                    bus_ref.settings_data.clone(),
+                    bus_ref.options_data.clone(),
                     sender,
                     self.highlighted_options.clone()
                 );
                 self.widgets.option_widgets = new_option_widgets;
                 self.widgets.root.append(&new_scroll);
+                self.widgets.scroll = new_scroll;
+                self.widgets.clear_button.set_sensitive(false);
             }
         }
     }
@@ -213,7 +229,7 @@ impl SimpleComponent for SettingsView {
             Ok(lock) => lock,
             Err(_) => return
         };
-        let mut mut_settings_data = match mut_bus.settings_data.write(){
+        let mut mut_settings_data = match mut_bus.options_data.write(){
             Ok(lock) => lock,
             Err(_) => return
         };
@@ -223,13 +239,13 @@ impl SimpleComponent for SettingsView {
 }
 fn create_entry_widgets(
         scroll: ScrolledWindow,
-        settings_data: Arc<RwLock<OptionsData>>,
+        options_data: Arc<RwLock<OptionsData>>,
         sender: ComponentSender<SettingsView>,
         highlighted_options: Arc<RwLock<Selection>>,
         // init_control_message: String
     ) -> OptionWidgets{
     
-    let settings_data_ref = settings_data.read().unwrap();
+    let options_data_ref = options_data.read().unwrap();
     let highlighted_options_ref = highlighted_options.write().unwrap();
 
     let container = GtkBox::builder()
@@ -267,14 +283,7 @@ fn create_entry_widgets(
 
         let api_url_label = Label::new(Some("API URL"));
 
-        let url_previous_text: &String = match settings_data_ref.get(&API_URL){
-            Some(data_kind) => {
-                match data_kind{
-                    OptionsDataKind::String(data) => data
-                }
-            },
-            None => &"".into()
-        };
+        let url_previous_text: String = options_data_ref.get_previous_text(API_URL);
         api_url_entry = Entry::builder()
             .text(url_previous_text)
             .hexpand(true)
@@ -286,25 +295,13 @@ fn create_entry_widgets(
         api_url_popup.add_css_class("settings-popup");
 
         // Follow when data in entry changes
-        {
-            let api_url_state_clone = api_url_state.clone();
-            let sender_clone = sender.clone();
-            let settings_data_clone = settings_data.clone();
-            api_url_entry.connect_changed(move |entry|{
-                // +++SettingStatusLables+++
-                let settings_data_ref = settings_data_clone.read().unwrap();
-                let Some(previous_text_wrapped) = settings_data_ref.get(&API_URL) else {return;};
-                let OptionsDataKind::String(previous_text) = previous_text_wrapped else {return;};
-                if *previous_text == entry.text().to_string(){
-                    set_state_label_empty(&api_url_state_clone);
-                    sender_clone.input(SettingsInput::SetOptionAsNotChanged(API_URL));
-                }
-                else{
-                    set_state_label_changed(&api_url_state_clone);
-                    sender_clone.input(SettingsInput::SetOptionAsChanged(API_URL));
-                }
-            });
-        }
+        watch_entry_option(
+            &api_url_entry,
+            api_url_state.clone(),
+            sender.clone(),
+            options_data.clone(),
+            API_URL
+        );
         
         api_url_entry.emit_by_name::<()>("changed", &[]);
 
@@ -318,13 +315,38 @@ fn create_entry_widgets(
 
 
     // Row 2
-    let api_key_row = GtkBox::new(gtk::Orientation::Horizontal, SETTINGS_HORIZONTAL_SPACING);
-    api_key_row.add_css_class("settings-row");
+    let api_key_row = GtkBox::builder()
+            .orientation(Horizontal)
+            .spacing(SETTINGS_HORIZONTAL_SPACING)
+            .css_classes(["settings-row"])
+            .build();
+    if highlighted_options_ref.test(selection::API_KEY){
+        api_key_row.set_css_classes(&["settings-row-highlighted"]);
+    }
 
     let api_key_label = Label::new(Some("API Key"));
+
+    let key_previous_text = options_data_ref.get_previous_text(API_KEY);
     let api_key_entry = Entry::builder()
-        .hexpand(true)
-        .build();
+            .text(key_previous_text)
+            .hexpand(true)
+            .build();
+
+    let api_key_state = Label::new(None);
+
+    let api_key_popup = Label::new(None);
+    api_key_popup.add_css_class("settings-popup");
+
+    // Follow when data in entry changes
+    watch_entry_option(
+        &api_key_entry,
+        api_key_state.clone(),
+        sender.clone(),
+        options_data.clone(),
+        API_KEY
+    );
+    
+    api_key_entry.emit_by_name::<()>("changed", &[]);
 
     api_key_row.append(&api_key_label);
     api_key_row.append(&api_key_entry);
@@ -332,6 +354,22 @@ fn create_entry_widgets(
 
     scroll.set_child(Some(&container));
     return OptionWidgets { api_url_entry, api_key_entry };
+}
+fn watch_entry_option(entry: &Entry, state_label: Label, sender: ComponentSender<SettingsView>,  settings_data: Arc<RwLock<OptionsData>>, flag: SelectionFlag) {
+    entry.connect_changed(move |entry|{
+        let settings_data_ref = settings_data.read().unwrap();
+        let Some(previous_text_wrapped) = settings_data_ref.get(&flag) else {return;};
+        let OptionsDataKind::String(previous_text) = previous_text_wrapped else {return;};
+        if *previous_text == entry.text().to_string(){
+            set_state_label_empty(&state_label);
+            sender.input(SettingsInput::SetOptionAsNotChanged(API_URL));
+        }
+        else{
+            set_state_label_changed(&state_label);
+            sender.input(SettingsInput::SetOptionAsChanged(API_URL));
+        }
+    });
+    
 }
 fn scroll() -> ScrolledWindow{
     ScrolledWindow::builder()
