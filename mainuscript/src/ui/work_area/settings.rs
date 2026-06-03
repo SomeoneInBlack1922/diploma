@@ -6,9 +6,9 @@ use url::Url;
 
 use borsh::{BorshSerialize, BorshDeserialize};
 
-use crate::{bus::Bus, ui::work_area::settings::selection::{API_KEY, API_URL, Selection, SelectionFlag, SelectionTrait}};
+use crate::{bus::Bus, ui::work_area::settings::{save_implement::attempt_read_and_save_settings, selection::{API_KEY, API_URL, Selection, SelectionFlag, SelectionTrait}}};
 mod selection;
-mod set;
+mod save_implement;
 fn set_state_label_empty(label: &Label){
     label.set_text("");
     label.set_css_classes(&[]);
@@ -65,6 +65,7 @@ pub struct SettingsWidgets{
     option_widgets: OptionWidgets,
     scroll: ScrolledWindow,
     root: GtkBox,
+    control_label: Label
 }
 pub struct OptionWidgets{
     api_url_entry: Entry,
@@ -74,6 +75,7 @@ pub struct OptionWidgets{
 
 #[derive(Debug)]
 pub enum SettingsInput{
+    SaveAttempt,
     SetOptionAsChanged(Selection),
     SetOptionAsNotChanged(Selection),
     ClearAllOptions //Basically a signal to disable clear_button
@@ -151,20 +153,19 @@ impl SimpleComponent for SettingsView {
             // init.init_control_message
         );
 
+        // Implement save_button
+        {
+            let sender_clone = sender.clone();
+            save_button.connect_clicked(move |_| {
+                sender_clone.input(SettingsInput::SaveAttempt);
+            });
+        }
+
         // Implement clear_button
         {
-            // let entries_box_clone = entries_box.clone();
-            // let settings_data_clone = bus.settings_data.clone();
             let sender_clone = sender.clone();
-            // let save_button_clone = save_button.clone();
-            // let clear_button_clone = clear_button.clone();
-            // let changed_options_clone = changed_options.clone();
-            // let error_options_clone = error_options.clone();
-            // let highlighted_options_clone = highlighted_options.clone();
-
-            // let control_container = 
             clear_button.connect_clicked(move |_|{
-                sender.input(SettingsInput::ClearAllOptions);
+                sender_clone.input(SettingsInput::ClearAllOptions);
             });
         }
         
@@ -182,7 +183,8 @@ impl SimpleComponent for SettingsView {
                     clear_button,
                     option_widgets,
                     scroll,
-                    root
+                    root,
+                    control_label
                 },
                 changed_options,
                 error_options,
@@ -193,8 +195,12 @@ impl SimpleComponent for SettingsView {
     }
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>) {
         match message{
+            SettingsInput::SaveAttempt => {
+                attempt_read_and_save_settings(self, sender);
+            },
             SettingsInput::SetOptionAsChanged(flag) => {
                 self.widgets.clear_button.set_sensitive(true);
+                self.widgets.save_button.set_sensitive(true);
                 self.changed_options.write().unwrap().set(flag);
             },
             SettingsInput::SetOptionAsNotChanged(flag) => {
@@ -203,9 +209,10 @@ impl SimpleComponent for SettingsView {
                 // If no changed settings remain
                 if *changed_options_ref == 0{
                     self.widgets.clear_button.set_sensitive(false);
+                    self.widgets.clear_button.set_sensitive(false);
                 }
             },
-            // Basically just disable clear_button
+            // Reload widgets
             SettingsInput::ClearAllOptions => {
                 // self.widgets.clear_button.set_sensitive(false);
                 self.widgets.root.remove(&self.widgets.scroll);
@@ -221,21 +228,25 @@ impl SimpleComponent for SettingsView {
                 self.widgets.root.append(&new_scroll);
                 self.widgets.scroll = new_scroll;
                 self.widgets.clear_button.set_sensitive(false);
+                self.widgets.save_button.set_sensitive(false);
             }
         }
     }
     fn shutdown(&mut self, widgets: &mut Self::Widgets, output: relm4::Sender<Self::Output>) {
-        let mut mut_bus = match self.bus.write(){
-            Ok(lock) => lock,
-            Err(_) => return
-        };
-        let mut mut_settings_data = match mut_bus.options_data.write(){
-            Ok(lock) => lock,
-            Err(_) => return
-        };
-        mut_settings_data.insert(API_URL, OptionsDataKind::String(self.widgets.option_widgets.api_url_entry.text().to_string()));
-        mut_settings_data.insert(API_KEY, OptionsDataKind::String(self.widgets.option_widgets.api_key_entry.text().to_string()));
+        save_options_data(self.bus.clone(), &self.widgets);
     }
+}
+fn save_options_data(bus: Arc<RwLock<Bus>>, widgets: &SettingsWidgets){
+    let mut_bus = match bus.write(){
+        Ok(lock) => lock,
+        Err(_) => return
+    };
+    let mut mut_options_data: std::sync::RwLockWriteGuard<'_, OptionsData> = match mut_bus.options_data.write(){
+        Ok(lock) => lock,
+        Err(_) => return
+    };
+    mut_options_data.insert(API_URL, OptionsDataKind::String(widgets.option_widgets.api_url_entry.text().to_string()));
+    mut_options_data.insert(API_KEY, OptionsDataKind::String(widgets.option_widgets.api_key_entry.text().to_string()));
 }
 fn create_entry_widgets(
         scroll: ScrolledWindow,
@@ -350,6 +361,7 @@ fn create_entry_widgets(
 
     api_key_row.append(&api_key_label);
     api_key_row.append(&api_key_entry);
+    api_key_row.append(&api_key_state);
     container.append(&api_key_row);
 
     scroll.set_child(Some(&container));
@@ -377,19 +389,3 @@ fn scroll() -> ScrolledWindow{
         .hexpand(true)
         .build()
 } 
-/// Returns empty string if text is empty
-fn validate_api_url(text: String) -> Result<Url, String>{
-        if text.is_empty(){
-            return Err("".into());
-        }
-        match Url::parse(&text){
-            Ok(url) => {
-                return Ok(url)
-            },
-            Err(err) => {
-                return Err(
-                    format!("Error: {}", err.to_string())
-                );
-            }
-        };
-}

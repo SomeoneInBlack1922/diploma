@@ -8,7 +8,7 @@ use relm4::prelude::*;
 use relm4::gtk;
 use gtk::prelude::*;
 use crate::ui::navigation::NavigationView;
-use crate::ui::navigation::NavigationEvent;
+use crate::ui::navigation::NavigationOutput;
 use crate::ui::work_area::settings::SettingsInit;
 use crate::ui::work_area::settings::SettingsView;
 use crate::bus::Bus;
@@ -24,11 +24,12 @@ pub struct TopView{
     bus: Arc<RwLock<Bus>>,
     top_container: GtkBox,
     working_area: GtkBox,
+    navigation_controller: Controller<NavigationView>,
     connector: Connectors
 }
 #[derive(Debug)]
 pub enum TopInput{
-    Navigation(NavigationEvent)
+    Navigation(NavigationOutput)
 }
 impl SimpleComponent for TopView{
     type Input = TopInput;
@@ -85,6 +86,7 @@ impl SimpleComponent for TopView{
                 top_container,
                 // current_working_area: working_area_empty
                 working_area,
+                navigation_controller: navigation_bar_controller,
                 connector:  Connectors::Empty
             },
             widgets: ()
@@ -95,7 +97,7 @@ impl SimpleComponent for TopView{
             TopInput::Navigation(navigation_event) => {
                 match navigation_event{
                     // Need to open settings in working area
-                    NavigationEvent::Settings => {
+                    NavigationOutput::Settings => {
                         tracing::info!("requested to open Settings");
                         // Remove previous working area
                         let previous_option = self.working_area.first_child();
@@ -115,7 +117,7 @@ impl SimpleComponent for TopView{
                         });
                         self.connector = Connectors::Setttings(setting_connector)
                     },
-                    NavigationEvent::Object(_) => {
+                    NavigationOutput::Object(_) => {
                         todo!()
                     }
                 }

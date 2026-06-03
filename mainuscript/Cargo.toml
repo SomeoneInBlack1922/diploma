@@ -8,8 +8,19 @@ borsh = {version = "1.6.1", features = ["derive"]}
 chrono = "0.4.44"
 colored = "3.1.1"
 figment = { version = "0.10.19", features = ["toml"]}
-openai_api_rust = "0.1.9"
+async-openai = { version = "0.40.3", features = [
+    "_api",
+    "response-types",
+    "responses",
+    "chat-completion-types",
+    "chat-completion",
+    "model",
+    "model-types",
+    "byot"
+    ]}
+regex = "1.12.3"
+# relm4 = "0.11.0"
 relm4 = "0.10.0"
-serde = { version = "1.0.228", features = ["derive"]}
+serde = { version = "1.0.228", features = ["derive"] }
 tracing = "0.1.44"
 url = "2.5.8"

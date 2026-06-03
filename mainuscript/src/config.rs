@@ -1,42 +1,63 @@
-use std::path::PathBuf;
-use std::env::home_dir;
+use std::sync::{Arc, RwLock};
+
 use borsh::{BorshSerialize, BorshDeserialize};
 use url::Url;
 
-use crate::{ai::AI, config_field::ConfigField, helper_types::OnFailure};
+use crate::{ai::AI, config_field::ConfigField};
 
+#[derive(Debug)]
+#[derive(Clone)]
+pub struct AiUrlKeyPair{
+    pub url: Option<Url>,
+    pub key: Option<String>
+}
 
-#[derive(BorshSerialize, BorshDeserialize)]
 #[derive(Debug)]
 pub struct Config{
-    #[borsh(skip)]
-    pub ai: ConfigField<Option<AI>>,
-    // pub ai_api_url: ConfigField<Option<Url>>,
-    // pub ai_api_key: ConfigField<Option<String>>
+    pub ai_api_url_key_pair: Arc<ConfigField<AiUrlKeyPair>>,
+    pub selected_model_name: Arc<ConfigField<Option<String>>>
 }
-impl Default for Config{
-    fn default() -> Self {
-        return Self {
-            ai: ConfigField::new(Some(AI::new()))
+#[derive(BorshSerialize, BorshDeserialize)]
+
+pub struct SerializableConfig{
+    pub ai_api_url: Option<String>,
+    pub ai_api_key: Option<String>,
+    pub selected_model_name: Option<String>
+}
+impl SerializableConfig{
+    pub fn into_config(self) -> Config {
+        let ai_api_url = match &self.ai_api_url{
+            Some(url_string) => Some(Url::parse(&url_string).unwrap()),
+            None => None
+        };
+        Config {
+            ai_api_url_key_pair: Arc::new(ConfigField::new(AiUrlKeyPair{
+                url: ai_api_url,
+                key: self.ai_api_key
+            })),
+            selected_model_name: Arc::new(ConfigField::new(self.selected_model_name))
         }
     }
 }
-// impl Config {
-//     /// This fucntuion is supposed to be called on a deserialized config to populate values that had been
-//     /// initialized to default values
-//     pub fn finish(&mut self) -> OnFailure<String>{
-//         let home_dir = match home_dir(){
-//             Some(path) => {path},
-//             None => {return Some(String::from("Failed to identify home directory, fucntion std::env::home_dir failed"));}
-//         };
-//         // self.storage_folder = ConfigField::new(home_dir.join(".mainuscript"));
-//         self.ai = ConfigField::new(None);
-//         return None;
-//         // return Ok(Config {
-//         //     storage_folder: ConfigField::new(home_dir.join(".mainuscript")),
-//         //     ai: ConfigField::new(None),
-//         //     // ai_api_url: ConfigField::new(None),
-//         //     // ai_api_key: ConfigField::new(None)
-//         // })
-//     }
-// }
+impl Config{
+    pub fn into_serializable_config(&self) -> SerializableConfig {
+        let ai_api_url_key_pair = self.ai_api_url_key_pair.get_value_rw_lock().read().unwrap();
+        SerializableConfig {
+            ai_api_url: match &ai_api_url_key_pair.url {
+                Some(url) => Some(url.to_string()),
+                None => None
+            },
+            ai_api_key: ai_api_url_key_pair.key.clone(),
+            selected_model_name: self.selected_model_name.get_value_rw_lock().read().unwrap().clone()
+        }
+    }
+}
+impl Default for SerializableConfig{
+    fn default() -> Self {
+        return Self {
+            ai_api_url: None,
+            ai_api_key: None,
+            selected_model_name: None
+        };
+    }
+}
