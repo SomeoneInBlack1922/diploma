@@ -25,7 +25,7 @@ use config::*;
 
 use crate::{bus::Bus, input_config::InputConfig};
 fn main() {
-    set_allowed_backends("x11");
+    set_allowed_backends("x11,*");
     RELM_THREADS.set(8).unwrap();
     let app = RelmApp::new("none.none.mainuscript");
     let input_config = match InputConfig::new(){
