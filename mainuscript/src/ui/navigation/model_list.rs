@@ -22,11 +22,11 @@ pub struct ModelList{
 }
 impl Component for ModelList{
     type Input = ();
-    type Output = ();
+    type Output = String; // Selected model name
     type Init = Arc<RwLock<Bus>>;
     type Root = ScrolledWindow;
     type Widgets = ();
-    type CommandOutput = ModelListInput;
+    type CommandOutput = ModelListCommand;
     fn init_root() -> Self::Root {
         new_scroll()
     }
@@ -52,10 +52,10 @@ impl Component for ModelList{
                 let model_list = get_models(&client).await;
                 match model_list{
                     Ok(model_list) => {
-                        ModelListInput::ModelsLoaded(model_list)
+                        ModelListCommand::ModelsLoaded(model_list)
                     },
                     Err(err) => {
-                        ModelListInput::Error(string_from_openai_error(err))
+                        ModelListCommand::Error(string_from_openai_error(err))
                     }
                 }
             });
@@ -78,7 +78,7 @@ impl Component for ModelList{
     )
     {
         match message{
-            ModelListInput::ModelsLoaded(model_list) => {
+            ModelListCommand::ModelsLoaded(model_list) => {
                 let mut model_typed_list: TypedListView<ModelEntry, NoSelection> = TypedListView::new();
                 for model in model_list.data.iter(){
                     let model_entry = ModelEntry::new(&model.id, sender.clone());
@@ -86,14 +86,14 @@ impl Component for ModelList{
                 }
                 self.root.set_child(Some(&model_typed_list.view));
             },
-            ModelListInput::Error(err) => {
+            ModelListCommand::Error(err) => {
                 self.root.set_child(Some(&GtkLabel::new(Some("Failed to load models"))));
             }
         }
     }
 }
 #[derive(Debug)]
-pub enum ModelListInput{
+pub enum ModelListCommand{
     ModelsLoaded(MyModelList),
     Error(String)
 }
@@ -122,8 +122,9 @@ impl RelmListItem for ModelEntry{
         _root.set_label(&self.model_id);
         let sender_clone = self.sender.clone();
         let model_id_clone = self.model_id.clone();
-        // _root.connect_clicked(move |_|{
-        //     sender_clone.input(ModelButtonInput::ModelSelected(model_id_clone.clone()));
-        // });
+        _root.connect_clicked(move |_|{
+            let mess: String = model_id_clone.clone();
+            sender_clone.output(mess);
+        });
     }
 }

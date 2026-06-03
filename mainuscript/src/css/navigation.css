@@ -51,3 +51,9 @@
 .navigation-object-text-script:active{
     background: rgb(255, 255, 0);
 }
+.navigation-model-select-button-empty{
+    background:rgb(128, 64, 0)
+}
+.navigation-model-select-button-selected{
+    background:rgb(255, 128, 0)
+}

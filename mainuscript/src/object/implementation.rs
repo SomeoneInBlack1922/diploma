@@ -40,7 +40,8 @@ impl TryFrom<&Path> for ObjectType {
         };
         match &*file_extension{
             "regular" => {return Ok(ObjectType::RegularChat)},
-            "textscript" => {return Ok(ObjectType::TextScript)}
+            // TEMPORARY
+            "textscript" => {return Ok(ObjectType::RegularChat)}
             _ => {return Err(());}
         }
     }

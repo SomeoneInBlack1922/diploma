@@ -34,6 +34,7 @@ pub enum NavigationOutput{
 }
 #[derive(Debug)]
 pub enum NavigationInput{
+    ModelSelected(String),
     OpenModeList,
     CloseModelList
 }
@@ -59,6 +60,8 @@ impl SimpleComponent for NavigationView{
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self>
     {
+        let bus_clone = init.clone();
+        let bus_ref = bus_clone.read().unwrap();
         let logo = LogoView::builder().launch(());
         let settings_button = gtk::Button::builder()
             .label("Settings")
@@ -75,12 +78,23 @@ impl SimpleComponent for NavigationView{
 
         // let model_button_builder = ModelButton::builder();
 
+        
 
-        let model_list_button = GtkButton::with_label("ListModels");
+        let model_list_button = GtkButton::builder()
+            .label("ListModels")
+            .css_classes(["navigation-model-select-button-empty"])
+            .build();
+        let selected_model = bus_ref.config.selected_model_name.get_value_rw_lock().read().unwrap();
+        if let Some(name) = &*selected_model {
+            model_list_button.set_css_classes(&["navigation-model-select-button-selected"]);
+            model_list_button.set_label(name);
+        }
         let sender_clone = sender.clone();
         model_list_button.connect_clicked(move |_|{
             sender_clone.input(NavigationInput::OpenModeList);
         });
+
+        drop(&bus_ref);
 
 
         let separator = Separator::new(gtk::Orientation::Horizontal);
@@ -99,7 +113,7 @@ impl SimpleComponent for NavigationView{
 
         let mut object_view_wrapper: TypedListView<NavigationObjectButton, NoSelection> = TypedListView::new();
         object_view_wrapper.view.add_css_class("navigation-list-view");
-        populate_object_view_wrapper(&scrollable_container, &mut object_view_wrapper, &init.read().unwrap(), sender.clone());
+        populate_object_view_wrapper(&scrollable_container, &mut object_view_wrapper, &init.clone().read().unwrap(), sender.clone());
 
 
         // Assembling root container
@@ -134,7 +148,10 @@ impl SimpleComponent for NavigationView{
                 self.list_place.append(&model_list_builder.root);
 
             
-                self.model_list_controller = Some(model_list_builder.launch(self.bus.clone()).forward(sender.input_sender(), |()|{NavigationInput::OpenModeList}));
+                self.model_list_controller = Some(model_list_builder.launch(self.bus.clone()).forward(
+                    sender.input_sender(),
+                    |model_id|{NavigationInput::ModelSelected(model_id)}
+                ));
 
                 self.model_list_button.connect_clicked(move |_|{
                     sender.input(NavigationInput::CloseModelList);
@@ -153,6 +170,13 @@ impl SimpleComponent for NavigationView{
                 self.model_list_button.connect_clicked(move |_| {
                     sender.input(NavigationInput::OpenModeList);
                 });
+            },
+            NavigationInput::ModelSelected(model_id) => {
+                let bus_ref = self.bus.read().unwrap();
+                self.model_list_button.set_css_classes(&["navigation-model-select-button-selected"]);
+                self.model_list_button.set_label(&model_id);
+                bus_ref.config.selected_model_name.update(Some(model_id));
+                sender.input(NavigationInput::CloseModelList);
             }
         }
     }
