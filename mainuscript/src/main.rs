@@ -9,6 +9,7 @@ mod ui{
     pub mod logo;
     pub mod work_area{
         pub mod settings;
+        pub mod regular_chat_view;
     }
 }
 mod storage;

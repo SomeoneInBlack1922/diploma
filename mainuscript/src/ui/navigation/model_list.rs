@@ -80,6 +80,7 @@ impl Component for ModelList{
         match message{
             ModelListCommand::ModelsLoaded(model_list) => {
                 let mut model_typed_list: TypedListView<ModelEntry, NoSelection> = TypedListView::new();
+                let x = model_typed_list.get(1);
                 for model in model_list.data.iter(){
                     let model_entry = ModelEntry::new(&model.id, sender.clone());
                     model_typed_list.append(model_entry);

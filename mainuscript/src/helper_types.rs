@@ -7,7 +7,7 @@ pub mod implementation;
 /// Unicode letters, numeric, '_', ' '
 #[derive(BorshDeserialize, BorshSerialize, Debug)]
 pub struct NameString{
-    inner: String
+    pub inner: String
 }
 pub type TextString = String;
 pub type AdequateDateTime = u64;

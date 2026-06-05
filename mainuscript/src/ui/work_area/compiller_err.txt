@@ -1,0 +1,28 @@
+error: future cannot be sent between threads safely
+   --> src/ui/work_area/regular_chat_view.rs:250:32
+    |
+250 |                         sender.oneshot_command(async move{
+    |                                ^^^^^^^^^^^^^^^ future created by async block is not `Send`
+    |
+    = help: within `{async block@src/ui/work_area/regular_chat_view.rs:250:48: 250:58}`, the trait `Send` is not implemented for `std::sync::RwLockReadGuard<'_, Bus>`
+note: future is not `Send` as this value is used across an await
+   --> src/ui/work_area/regular_chat_view.rs:255:171
+    |
+251 | ...et local_bus_ref = bus_clone.read().unwrap();
+    |       ------------- has type `std::sync::RwLockReadGuard<'_, Bus>` which is not `Send`
+...
+255 | ...       let stream_attempt: Result<ChatCompletionResponseStream, OpenAIError> = local_client.chat().create_stream(local_completition_request).await;
+    |                                                                                                                                                 ^^^^^ await occurs here, with `local_bus_ref` maybe used later
+note: required by a bound in `relm4::ComponentSender::<C>::oneshot_command`
+   --> /home/cimax/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/relm4-0.10.1/src/channel/component.rs:229:58
+    |
+227 |             pub fn oneshot_command<Fut>(&self, future: Fut)
+    |                    --------------- required by a bound in this associated function
+228 |             where
+229 |                 Fut: Future<Output = C::CommandOutput> + Send + 'static,
+    |                                                          ^^^^ required by this bound in `ComponentSender::<C>::oneshot_command`
+...
+255 | sender_impl!(ComponentSender, Component);
+    | ---------------------------------------- in this macro invocation
+    = note: this error originates in the macro `sender_impl` (in Nightly builds, run with -Z macro-backtrace for more info)
+

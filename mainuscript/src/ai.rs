@@ -11,64 +11,52 @@ use url::Url;
 
 use crate::{config::{AiUrlKeyPair, Config}, config_field::{ConfigField, ConfigSubscription}};
 
+pub type GlobalClientConfig = Arc<ConfigField<Option<Client<OpenAIConfig>>>>;
+
 #[derive(Debug)]
 pub struct AI{
-    openai: Arc<ConfigField<ClientState>>,
+    openai: GlobalClientConfig,
     async_runtime: Arc<Runtime>,
     ai_url_key_pair_subscriber: ConfigSubscription<AiUrlKeyPair>
 }
 impl AI {
     pub fn new(config: &Config, async_runtime: Runtime) -> Self{
 
-        let client_config = Arc::new(ConfigField::new(ClientState::Empty));
+        let global_config:GlobalClientConfig = Arc::new(ConfigField::new(None));
         // Handle changes in future
         let runtine_arc = Arc::new(async_runtime);
         let runtime_clone = runtine_arc.clone();
-        let client_config_clone = client_config.clone();
+        let global_config_clone = global_config.clone();
         let ai_url_key_pair_subscriber = ConfigSubscription::subscribe(config.ai_api_url_key_pair.clone(), Box::new(move |new_pair|{
             if let (Some(url), Some(key)) = (&new_pair.url, &new_pair.key){
                 let mut  config = OpenAIConfig::new();
                 config = config.with_api_base(url.to_string());
                 config = config.with_api_key(key);
                 let client = Client::with_config(config);
-                match runtime_clone.block_on(get_models(&client)){
-                    Ok(_) => {
-                        client_config_clone.update(ClientState::Works(client));
-                    },
-                    Err(err) => {
-                        client_config_clone.update(ClientState::Fails(string_from_openai_error(err)));
-                    }
-                }
+                global_config_clone.update(Some(client));
+            }
+            else {
+                global_config_clone.update(None);
             }
         }
         ));
 
-        // Run background task to test runtime if settings are set
-        let client_config_clone = client_config.clone();
-        let ai_api_url_key_pair_clone = config.ai_api_url_key_pair.get_value_rw_lock().read().unwrap().clone();
-        runtine_arc.spawn(async move {
-            if let (Some(url), Some(key)) = (ai_api_url_key_pair_clone.url, ai_api_url_key_pair_clone.key){
-                let mut  config = OpenAIConfig::new();
-                config = config.with_api_base(url.to_string());
-                config = config.with_api_key(key);
-                let client = Client::with_config(config);
-                
-                match get_models(&client).await{
-                    Ok(_) => {
-                        client_config_clone.update(ClientState::Works(client));
-                    },
-                    Err(err) => {
-                        client_config_clone.update(ClientState::Fails(string_from_openai_error(err)));
-                    }
-                }
 
-            }
-            return;
-        });
+        let current_url_key_pair = config.ai_api_url_key_pair.get_value_rw_lock().read().unwrap();
+        if let (Some(url), Some(key)) = (&current_url_key_pair.url, &current_url_key_pair.key){
+            let mut  config = OpenAIConfig::new();
+            config = config.with_api_base(url.to_string());
+            config = config.with_api_key(key);
+            let client = Client::with_config(config);
+            global_config.ignorant_update(Some(client));
+        }
+        else {
+            global_config.ignorant_update(None);
+        }
         
         
         return Self{
-            openai: client_config,
+            openai: global_config,
             async_runtime: runtine_arc,
             ai_url_key_pair_subscriber: ai_url_key_pair_subscriber
         }
@@ -114,7 +102,7 @@ pub async fn get_models(client: &Client<OpenAIConfig>) -> Result<MyModelList, Op
     }
 }
 impl Deref for AI{
-    type Target = Arc<ConfigField<ClientState>>;
+    type Target = GlobalClientConfig;
     fn deref(&self) -> &Self::Target {
         &self.openai
     }
@@ -162,28 +150,28 @@ impl PartialEq for ClientState {
 }
 // unsafe impl Send for ClientState{}
 
-#[test]
-fn ai_new_test(){
-    let config = Config{
-        ai_api_url_key_pair: Arc::new(ConfigField::new(AiUrlKeyPair{
-            url: Some(Url::parse("https://api.com").unwrap()),
-            key: Some("sk-or-v1-2588449ed871e381e5a98e7cbcdvfb5442gg59c28d0476e88dd6c2a733f2d44".into())
-        })),
-        selected_model_name: Arc::new(ConfigField::new(None))
-    };
-    let runtime = Builder::new_multi_thread().enable_all().build().unwrap();
-    let ai = AI::new(&config, runtime);
-    assert_eq!(*ai.get_value_rw_lock().read().unwrap(), ClientState::Empty);
-    sleep(Duration::from_secs(5));
-    match &*ai.get_value_rw_lock().read().unwrap(){
-        ClientState::Empty => {println!("EMPTY")},
-        ClientState::Fails(err) => {
-            File::create("./error.txt").unwrap().write_all(&err.as_bytes()).unwrap();
-        },
-        ClientState::Works(_) => {println!("WORKS")}
-    }
-    // assert_eq!(*ai.get_value_rw_lock().read().unwrap(), ClientState::Works(Client::new()));
-}
+// #[test]
+// fn ai_new_test(){
+//     let config = Config{
+//         ai_api_url_key_pair: Arc::new(ConfigField::new(AiUrlKeyPair{
+//             url: Some(Url::parse("https://api.com").unwrap()),
+//             key: Some("sk-or-v1-2588449ed871e381e5a98e7cbcdvfb5442gg59c28d0476e88dd6c2a733f2d44".into())
+//         })),
+//         selected_model_name: Arc::new(ConfigField::new(None))
+//     };
+//     let runtime = Builder::new_multi_thread().enable_all().build().unwrap();
+//     let ai = AI::new(&config, runtime);
+//     assert_eq!(*ai.get_value_rw_lock().read().unwrap(), ClientState::Empty);
+//     sleep(Duration::from_secs(5));
+//     match &*ai.get_value_rw_lock().read().unwrap(){
+//         ClientState::Empty => {println!("EMPTY")},
+//         ClientState::Fails(err) => {
+//             File::create("./error.txt").unwrap().write_all(&err.as_bytes()).unwrap();
+//         },
+//         ClientState::Works(_) => {println!("WORKS")}
+//     }
+//     // assert_eq!(*ai.get_value_rw_lock().read().unwrap(), ClientState::Works(Client::new()));
+// }
 use serde::Deserialize;
 #[derive(Deserialize)]
 #[derive(Debug)]
