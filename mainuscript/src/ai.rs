@@ -16,16 +16,13 @@ pub type GlobalClientConfig = Arc<ConfigField<Option<Client<OpenAIConfig>>>>;
 #[derive(Debug)]
 pub struct AI{
     openai: GlobalClientConfig,
-    async_runtime: Arc<Runtime>,
     ai_url_key_pair_subscriber: ConfigSubscription<AiUrlKeyPair>
 }
 impl AI {
-    pub fn new(config: &Config, async_runtime: Runtime) -> Self{
+    pub fn new(config: &Config) -> Self{
 
         let global_config:GlobalClientConfig = Arc::new(ConfigField::new(None));
         // Handle changes in future
-        let runtine_arc = Arc::new(async_runtime);
-        let runtime_clone = runtine_arc.clone();
         let global_config_clone = global_config.clone();
         let ai_url_key_pair_subscriber = ConfigSubscription::subscribe(config.ai_api_url_key_pair.clone(), Box::new(move |new_pair|{
             if let (Some(url), Some(key)) = (&new_pair.url, &new_pair.key){
@@ -57,7 +54,6 @@ impl AI {
         
         return Self{
             openai: global_config,
-            async_runtime: runtine_arc,
             ai_url_key_pair_subscriber: ai_url_key_pair_subscriber
         }
     }

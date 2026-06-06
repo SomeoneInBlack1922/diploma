@@ -34,7 +34,7 @@ pub enum TopInput{
 impl SimpleComponent for TopView{
     type Input = TopInput;
     type Output = ();
-    type Init = Bus;
+    type Init = Arc<RwLock<Bus>>;
     type Root = Window;
     type Widgets = ();
     fn init_root() -> Self::Root {
@@ -53,7 +53,7 @@ impl SimpleComponent for TopView{
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self>
     {
-        let bus = Arc::new(RwLock::new(init));
+        let bus = init;
         //UI
         let top_container = GtkBox::new(gtk::Orientation::Horizontal, 0);
         let working_area = GtkBox::new(gtk::Orientation::Horizontal, 0);

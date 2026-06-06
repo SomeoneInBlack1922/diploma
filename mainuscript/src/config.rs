@@ -13,6 +13,7 @@ pub struct AiUrlKeyPair{
 }
 
 #[derive(Debug)]
+#[derive(Clone)]
 pub struct Config{
     pub ai_api_url_key_pair: Arc<ConfigField<AiUrlKeyPair>>,
     pub selected_model_name: Arc<ConfigField<Option<String>>>

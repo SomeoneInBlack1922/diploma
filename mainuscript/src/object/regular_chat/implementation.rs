@@ -1,5 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
+use chrono::TimeZone;
 use relm4::gtk::TextView;
 use relm4::gtk::prelude::BoxExt;
 use relm4::gtk::prelude::TextBufferExt;
@@ -11,7 +12,26 @@ use gtk::Label as GtkLabel;
 
 use crate::object::regular_chat::*;
 impl RegularChat {
-    
+    pub fn empty() -> Self{
+        RegularChat {
+            api_version: 0,
+            name: NameString::new(),
+            contents: RegularChatBrench{messages: vec![]},
+            creating_date: 0,
+            last_update_date: 0
+
+        }
+    }
+    pub fn new(name: NameString) -> Self{
+        let now_date = chrono::Utc::now().timestamp_micros();
+        RegularChat {
+            api_version: API_VERSION,
+            name: name,
+            contents: RegularChatBrench { messages: vec![] },
+            creating_date: now_date,
+            last_update_date: now_date
+        }
+    }
 }
 impl Deref for RegularChatBrench{
     type Target = Vec<Message>;
@@ -66,3 +86,27 @@ impl RelmListItem for Message{
         _root.append(&message_text_view);
     }
 }
+// Manual serialization and deserialiation so that i can use the TypedListView type in my structs
+
+// For when i tried using TypedListView
+// impl BorshDeserialize for RegularChatBrench{
+//     fn deserialize_reader<R: std::io::prelude::Read>(reader: &mut R) -> std::io::Result<Self> {
+//         let len = u32::deserialize_reader(reader)?;
+//         let mut out_list: TypedListView<Message, NoSelection> = TypedListView::new();
+//         for _ in 0..len{
+//             out_list.append(Message::deserialize_reader(reader)?);
+//         }
+//         return Ok(RegularChatBrench{
+//             messages: out_list
+//         });
+//     }
+// }
+// impl BorshSerialize for RegularChatBrench{
+//     fn serialize<W: std::io::prelude::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+//         u32::serialize(&self.messages.len(), writer)?;
+//         for message in self.messages.iter(){
+//             Message::serialize(&*message.borrow(), writer)?;
+//         };
+//         return Ok(());
+//     }
+// }

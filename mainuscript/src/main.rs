@@ -1,7 +1,10 @@
 use relm4::{RELM_BLOCKING_THREADS, RELM_THREADS, RelmApp, gtk::{gdk::set_allowed_backends}};
 use ui::top::TopView;
 use colored::Colorize;
-use std::process::exit;
+use std::{process::exit, time::Duration};
+
+use std::sync::Arc;
+use std::sync::RwLock;
 
 mod ui{
     pub mod top;
@@ -43,5 +46,21 @@ fn main() {
             exit(-1)
         }
     };
-    app.run::<TopView>(bus);
+    let bus_shared = Arc::new(RwLock::new(bus));
+    app.run::<TopView>(bus_shared.clone());
+    match Arc::into_inner(bus_shared){
+        Some(bus_rwlock) => {
+            match bus_rwlock.into_inner(){
+                Ok(bus) => {
+                    bus.close();
+                },
+                Err(err) => {
+                    println!("Bus got poisoned!\n{}", err.to_string());
+                }
+            }
+        },
+        None => {
+            println!("Unexpected error happened when attempting to get bus shared refference to wrap things up")
+        }
+    }
 }

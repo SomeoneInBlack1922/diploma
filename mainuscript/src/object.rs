@@ -10,12 +10,15 @@ pub mod regular_chat;
 pub mod implementation;
 
 #[derive(Debug)]
+#[derive(Clone)]
+// Data about object not loaded in memory but present on disk
 pub struct FsObject{
     pub object_type: ObjectType,
     pub name: NameString,
     pub metadata: Metadata,
-    pub path: PathBuf
+    pub path: PathBuf // relative to storage
 }
+#[derive(Clone)]
 #[derive(Debug)]
 pub enum ObjectType{
     RegularChat,

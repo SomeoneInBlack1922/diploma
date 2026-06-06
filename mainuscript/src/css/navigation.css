@@ -57,3 +57,39 @@
 .navigation-model-select-button-selected{
     background:rgb(255, 128, 0)
 }
+.navigation-object-control-container button{
+    inline-size: 100%;
+}
+.navigation-object-control-new-button{
+    background: rgb(0, 0, 128);
+}
+.navigation-object-control-new-button:hover{
+    background: rgb(0, 0, 64);
+}
+.navigation-object-control-new-button:active{
+    background: rgb(0, 0, 255);
+}
+.navigation-object-control-new-button:disabled{
+    background: rgb(0, 0, 64);
+    color: gray;
+}
+.navigation-object-control-delete-button{
+    background: rgb(128, 0, 0);
+}
+.navigation-object-control-delete-button:hover{
+    background: rgb(64, 0, 0);
+}
+.navigation-object-control-delete-button:active{
+    background: rgb(255, 0, 0);
+}
+.navigation-object-control-delete-button-engaged{
+    color: black;
+    background: rgb(128, 128, 128);
+}
+.navigation-object-control-delete-button-engaged:hover{
+    background: rgb(64, 64, 64);
+}
+.navigation-object-control-delete-button-engaged:active{
+    color: black;
+    background: rgb(255, 255, 255);
+}

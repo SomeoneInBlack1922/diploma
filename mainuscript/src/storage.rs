@@ -1,8 +1,9 @@
 use std::fs::{File, create_dir_all, read_dir};
 use std::path::PathBuf;
 use std::io::ErrorKind::NotFound;
-use crate::helper_types::{OnFailure};
+use crate::helper_types::{NameString, OnFailure};
 use crate::object::FsObject;
+use crate::object::regular_chat::RegularChat;
 use borsh::{BorshDeserialize, BorshSerialize};
 use colored::Colorize;
 
@@ -10,6 +11,7 @@ pub const OBJECT_DIR_PATH: &'static str = "objects";
 pub const CONFIG_FILE: &'static str = "config.data";
 pub const SETTINGS_DATA_FILE: &'static str = "settings.data";
 #[derive(Default)]
+#[derive(Clone)]
 pub struct Storage{
     storage_folder: PathBuf
 }
@@ -18,6 +20,10 @@ impl Storage{
         return Self{
             storage_folder
         }
+    }
+    /// Join given path with the path of storage folder
+    pub fn join(&self, path: PathBuf) -> PathBuf{
+        return self.storage_folder.join(path);
     }
     /// Returns collection of names of FsObjects
     /// If fails to load returns Err(String)
@@ -61,7 +67,7 @@ impl Storage{
         }
         return None;
     }
-    pub fn read_from_file<T: BorshDeserialize + Default>(&self, file_path_input: &str) -> T{
+    pub fn read_from_file<T: BorshDeserialize>(&self, file_path_input: &str) -> Result<T, std::io::Error>{
         let file_path = &self.storage_folder.join(file_path_input);
 
         let file_result = File::open(file_path);
@@ -70,63 +76,59 @@ impl Storage{
             Ok(mut file) => {
                 match borsh::from_reader(&mut file) {
                     Ok(config) => config,
-                    Err(_) => {
-                        println!(
-                            "{} {} {}",
-                            "Failed to deserialize config from save file".yellow() ,
-                            file_path.to_string_lossy().cyan(), 
-                            "Loading default cconfig".yellow()
-                        );
-                        T::default()
+                    Err(err) => {
+                        return Err(err)
                     }
                 }
             },
             // If failed to open a file
-            Err(err) => {
-                // If error was something other then file not existing print about it
-                if err.kind() != NotFound{
-                    println!(
-                        "{} {} {} {} {}",
-                        "Failed to open save file".yellow() ,
-                        file_path.to_string_lossy().cyan(), 
-                        "due to".yellow(),
-                        err.to_string().red(),
-                        "falling back to default".yellow()
-                    );
-                }
-                T::default()
-            }
+            Err(err) => {return Err(err)}
         };
-        return output
+        return Ok(output)
     }
-    pub fn store_to_file<T: BorshSerialize + Default>(&self, data: &T, file_path_input: &str){
+    pub fn store_to_file<T: BorshSerialize>(&self, data: &T, file_path_input: &str) -> OnFailure<std::io::Error>{
         let file_path = &self.storage_folder.join(file_path_input);
         let file: File = match File::create(file_path){
             Ok(file) => {file},
             Err(err) => {
-                println!(
-                    "{} {} {} {} {}",
-                    "Failed to save data to".yellow(),
-                    file_path.to_string_lossy().cyan(),
-                    "due to".yellow(),
-                    err.to_string().red(),
-                    "some program settings may be lost".yellow()
-                );
-                return;
+                return Some(err);
             }
         };
         match borsh::to_writer(file, &data){
-            Ok(_) => return,
+            Ok(_) => return None,
             Err(err) => {
-                println!(
-                    "{} {} {} {} {}",
-                    "Failed to save data to".yellow(),
-                    file_path.to_string_lossy().cyan(),
-                    "due to".yellow(),
-                    err.to_string().red(),
-                    "some program settings may be lost".yellow()
-                );
-                return;
+                return Some(err);
+            }
+        }
+    }
+    pub fn new_chat(&self, name: NameString) -> Result<(RegularChat, FsObject), std::io::Error>{
+        let chat_path = self.storage_folder.join(OBJECT_DIR_PATH).join::<String>(format!("{}.regular", name.inner).into());
+        let new_chat = RegularChat::new(name.clone());
+        // IO part
+        let file_path = &self.storage_folder.join(chat_path.clone());
+        let file: File = match File::create(file_path){
+            Ok(file) => {file},
+            Err(err) => {
+                return Err(err);
+            }
+        };
+        if let Err(err) = borsh::to_writer(&file, &new_chat){
+            return Err(err);
+        }
+
+        match self.store_to_file(&new_chat, &chat_path.to_string_lossy()){
+            Some(err) => return Err(err),
+            None => {
+                let out_fs_object = FsObject{
+                    object_type: crate::object::ObjectType::RegularChat,
+                    name: name,
+                    metadata: match file.metadata(){
+                        Ok(metadata) => metadata,
+                        Err(err) => return Err(err)
+                    },
+                    path: chat_path
+                };
+                return Ok((new_chat, out_fs_object))
             }
         }
     }

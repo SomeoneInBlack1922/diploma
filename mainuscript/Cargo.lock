@@ -1190,6 +1190,7 @@ dependencies = [
  "chrono",
  "colored",
  "figment",
+ "futures",
  "regex",
  "relm4",
  "serde",

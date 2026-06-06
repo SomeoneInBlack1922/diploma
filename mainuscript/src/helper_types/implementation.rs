@@ -46,11 +46,14 @@ impl NameString{
     }
 }
 impl TryFrom<String> for NameString{
-    type Error = char;
+    type Error = Option<char>;
     /// If validation fails first invalid chat is returned
     fn try_from(text: String) -> Result<Self, Self::Error> {
+        if text.is_empty() {
+            return Err(None);
+        }
         match Self::valid_str(&text[..]){
-            Some(char) => {return Err(char)},
+            Some(char) => {return Err(Some(char))},
             None => {return Ok(Self{inner: text})}
         }
     }

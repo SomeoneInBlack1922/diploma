@@ -1,12 +1,14 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 pub use implementation::*;
-use relm4::gtk::TextBuffer;
+use relm4::{gtk::{NoSelection, TextBuffer}, typed_view::list::TypedListView};
 /// Each regular chat has a thread of messages.
 /// There can be multiple threads: at each message user can reprompt model or edit own message
 /// wich creates alternative branch
 
 use crate::helper_types::{AdequateDateTime, NameString, TextString};
 pub mod implementation;
+
+pub const API_VERSION: u64 = 0;
 /// Holds all messages and metadata
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct RegularChat{
@@ -23,13 +25,14 @@ pub struct RegularChatBrench{
     pub messages: Vec<Message>
 }
 /// Holds the message, and all branches that branch off of it.
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(BorshDeserialize, BorshSerialize, Clone)]
 pub struct Message{
     pub author: MessageAuthor,
     // pub date: AdequateDateTime,
     pub content: TextString
 }
-#[derive(BorshDeserialize, BorshSerialize)]
+unsafe impl Send for Message{}
+#[derive(BorshDeserialize, BorshSerialize, Clone)]
 pub enum MessageAuthor{
     User,
     AI(String)
