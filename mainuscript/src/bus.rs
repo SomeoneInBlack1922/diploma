@@ -72,14 +72,16 @@ impl Bus {
     pub fn close(self){
         let storage_clone = self.storage.clone();
         let config_owned = self.config;
-        self.async_runtime.spawn_blocking(move ||{
-            storage_clone.store_to_file::<SerializableConfig>(&config_owned.into_serializable_config(), CONFIG_FILE);
-        });
+        storage_clone.store_to_file::<SerializableConfig>(&config_owned.into_serializable_config(), CONFIG_FILE);
+        // self.async_runtime.spawn_blocking(move ||{
+        //     storage_clone.store_to_file::<SerializableConfig>(&config_owned.into_serializable_config(), CONFIG_FILE);
+        // });
         let storage_owned = self.storage;
         let options_data_owned = self.options_data;
-        self.async_runtime.spawn_blocking(move ||{
-            storage_owned.store_to_file(&*options_data_owned.read().unwrap(), SETTINGS_DATA_FILE);
-        });
+        storage_owned.store_to_file(&*options_data_owned.read().unwrap(), SETTINGS_DATA_FILE);
+        // self.async_runtime.spawn_blocking(move ||{
+        //     storage_owned.store_to_file(&*options_data_owned.read().unwrap(), SETTINGS_DATA_FILE);
+        // });
         let runtime = self.async_runtime;
         runtime.shutdown_timeout(Duration::from_hours(2));
     }

@@ -25,14 +25,14 @@ pub struct RegularChatBrench{
     pub messages: Vec<Message>
 }
 /// Holds the message, and all branches that branch off of it.
-#[derive(BorshDeserialize, BorshSerialize, Clone)]
+#[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
 pub struct Message{
     pub author: MessageAuthor,
     // pub date: AdequateDateTime,
     pub content: TextString
 }
 unsafe impl Send for Message{}
-#[derive(BorshDeserialize, BorshSerialize, Clone)]
+#[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
 pub enum MessageAuthor{
     User,
     AI(String)

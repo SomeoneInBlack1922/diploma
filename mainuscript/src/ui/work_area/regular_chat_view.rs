@@ -194,7 +194,7 @@ impl Component for RegularChatView{
             .hexpand(true)
             .build();
         let mut chat_completition_request = CreateChatCompletionRequest::default();
-        chat_completition_request.max_completion_tokens = Some(u16::MAX as u32);
+        chat_completition_request.max_completion_tokens = Some(512u32);
 
             
         // Deal with messages
@@ -287,7 +287,7 @@ impl Component for RegularChatView{
         match message {
             RegularChatInput::SendMessage => unsafe{
                 println!("SendMessage entered");
-                let data = &mut self.data.assume_init_read();
+                let data = &mut self.data.assume_init_mut();
                 let entry_text: String = data.chat_entry.text().into();
                 // If not text is input => stop
                 if entry_text.is_empty(){
@@ -298,18 +298,28 @@ impl Component for RegularChatView{
                 println!("SendMessage beyond empty");
                 let bus_ref = data.bus.read().unwrap();
                 
-                // Clone request and put user's message into chat
-                let mut local_completition_request = data.chat_completition_request.clone();
-                local_completition_request.model = data.selected_model.clone().unwrap(); // Should be set at this point
-                local_completition_request.messages.push(ChatCompletionRequestMessage::User(
+                // Clone request
+                // let mut local_completition_request = data.chat_completition_request.clone();
+                data.chat_completition_request.model = data.selected_model.clone().unwrap(); // Should be set at this point
+                data.chat_completition_request.messages.push(ChatCompletionRequestMessage::User(
                     ChatCompletionRequestUserMessageArgs::default().content(entry_text.clone()).build().expect("ChatCompletionRequestUserMessageArgs2")
                 ));
-                let new_message = Message {
+                let mut local_completition_request = data.chat_completition_request.clone();
+
+                // Create user's message and AI's response
+                let new_user_message = Message {
                     author: MessageAuthor::User,
                     content: entry_text
                 };
-                data.messages_list.append(new_message.clone());
-                data.chat_data.contents.push(new_message);
+                data.messages_list.append(new_user_message.clone());
+                data.chat_data.contents.push(new_user_message);
+
+                let new_ai_message = Message{
+                    author: MessageAuthor::AI(data.selected_model.clone().unwrap()),
+                    content: String::new()
+                };
+                data.messages_list.append(new_ai_message.clone());
+                data.chat_data.contents.push(new_ai_message);
 
                 // Change control button function to stopping the ai message
                 let sender_clone = sender.clone();
@@ -339,11 +349,11 @@ impl Component for RegularChatView{
             },
             RegularChatInput::StopMessage => unsafe {
                 println!("StopMessage");
-                self.data.assume_init_read().message_is_read_from_stream = false;
+                self.data.assume_init_mut().message_is_read_from_stream = false;
             }
             RegularChatInput::SelectedModelUpdated => unsafe {
                 println!("SelectedModelUpdated");
-                let data = &mut self.data.assume_init_read();
+                let data = &mut self.data.assume_init_mut();
                 let bus_ref = data.bus.read().unwrap();
                 match &*bus_ref.config.selected_model_name.get_value_rw_lock().read().unwrap(){
                     Some(_) => {
@@ -378,31 +388,30 @@ impl Component for RegularChatView{
         match message{
             RegularChatCommandOutput::GotStream(stream) => unsafe{
                 println!("GotStream");
-                let data = &mut self.data.assume_init_read();
+                let data = &mut self.data.assume_init_mut();
                 if !data.message_is_read_from_stream{ // Stop if command to stop was send
                     data.status_label.set_label("Stopped listening");
-                    let list_len = data.chat_data.contents.len();
-                    data.chat_data.contents.remove(list_len);
+                    // Delete user's and model's messages
+                    delere_last_two_messages(data);
                     return;
                 }
                 data.status_label.set_label("Streaming...");
                 // let last_message_wrapped = Arc::new(RwLock::new(last_message));
                 sender.oneshot_command(async move{
-                    get_stream_chunk(stream).await
+                    work_on_stream(stream).await
                 });
             },
             RegularChatCommandOutput::GotMessageChank(message, stream) => unsafe{
                 println!("GotMessageChank");
-                let data = &mut self.data.assume_init_read();
+                let data = &mut self.data.assume_init_mut();
                 if !data.message_is_read_from_stream{ // Stop if command to stop was send
                     data.status_label.set_label("Stopped listening");
-                    let list_len = data.chat_data.contents.len();
-                    data.chat_data.contents.remove(list_len);
+                    delere_last_two_messages(data);
                     
                     return;
                 }
                 let list_len = data.chat_data.contents.len();
-                let mut last_message_option: Option<&mut Message> = data.chat_data.contents.get_mut(list_len);
+                let mut last_message_option: Option<&mut Message> = data.chat_data.contents.get_mut(list_len - 1);
                 let last_message = match last_message_option{
                     Some(message) => message,
                     None => {
@@ -412,35 +421,41 @@ impl Component for RegularChatView{
                 };
                 last_message.content.push_str(&message);
                 sender.oneshot_command(async move{
-                    get_stream_chunk(stream).await
+                    work_on_stream(stream).await
                 });
             },
             RegularChatCommandOutput::ContinueListening(stream) => unsafe{
                 println!("ContinueListening");
-                let data = &mut self.data.assume_init_read();
+                let data = &mut self.data.assume_init_mut();
                 if !data.message_is_read_from_stream{ // Stop if command to stop was send
                     data.status_label.set_label("Stopped listening");
-                    let list_len = data.chat_data.contents.len();
-                    data.chat_data.contents.remove(list_len);
+                    delere_last_two_messages(data);
                     return;
                 }
                 sender.oneshot_command(async move{
-                    get_stream_chunk(stream).await
+                    work_on_stream(stream).await
                 });
             },
             RegularChatCommandOutput::Failure(err) => unsafe{
                 println!("Failure");
-                // let data = &mut self.data.assume_init_read();
-                // data.status_label.set_label(&err.to_string());
-                // let list_len = data.chat_data.contents.len();
-                // data.chat_data.contents.remove(list_len);
+                let data = &mut self.data.assume_init_mut();
+                data.status_label.set_label("Error happened");
+                delere_last_two_messages(data);
+                dbg!(err);
 
-                // let list_len = data.messages_list.len();
-                // data.messages_list.remove(list_len);
+                // Reset cutton and label
+                data.control_button.set_label("=>");
+                data.status_label.set_label("");
+                let sender_clone = sender.clone();
+                let new_handler = data.control_button.connect_clicked(move |_|{
+                    sender.input(RegularChatInput::SendMessage);
+                });
+                let old_handler = std::mem::replace(&mut data.control_button_handler, new_handler);
+                data.control_button.disconnect(old_handler);
             },
             RegularChatCommandOutput::ResponseOver => unsafe{
                 println!("ResponseOver");
-                let data = &mut self.data.assume_init_read();
+                let data = &mut self.data.assume_init_mut();
                 // Reset cutton and label
                 data.control_button.set_label("=>");
                 data.status_label.set_label("");
@@ -469,15 +484,11 @@ impl Component for RegularChatView{
             return;
         }
         unsafe {
-            let data = &mut self.data.assume_init_read();
+            let data = &mut self.data.assume_init_mut();
             // If was in the process of listning on new message forget it
             if data.message_is_read_from_stream{
                 // Delete two last messages
-                let list_len = data.chat_data.contents.len();
-                data.chat_data.contents.remove(list_len);
-
-                let list_len = data.chat_data.contents.len();
-                data.chat_data.contents.remove(list_len);
+                delere_last_two_messages(data);
             }
             let bus_ref = data.bus.read().unwrap();
             let storage_clone = bus_ref.storage.clone();
@@ -491,25 +502,27 @@ impl Component for RegularChatView{
         }
     }
 }
-// fn set_control_button(
-//     control_button: GtkButton,
-//     chat_readiness: RegularChatReadiness,
-//     sender: ComponentSender<RegularChatView>
-// ){
-//     match chat_readiness{
-//         RegularChatReadiness::Ready => {
-//             control_button.set_sensitive(true);
-//             control_button.connect_clicked(move |_| {
-//                 sender.input(RegularChatInput::SendMessage)
-//             });
-//         },
-//         _ => {
-//             control_button.set_sensitive(false);
-//         }
-//     }
-// }
-async fn get_stream_chunk(mut stream: ChatCompletionResponseStream) -> RegularChatCommandOutput{
-    if let Some(result) = stream.next().await{
+fn delere_last_two_messages(data: &mut RegularChatViewData){
+    println!("Delete messages entered");
+    dbg!(data.chat_data.contents.pop());
+    data.chat_data.contents.pop();
+    
+    let list_len = data.messages_list.len();
+    if list_len > 0{
+        dbg!(data.messages_list.remove(list_len));
+    }
+    let list_len = data.messages_list.len();
+    if list_len > 0{
+        data.messages_list.remove(list_len);
+    }
+
+    data.chat_completition_request.messages.pop();
+    data.chat_completition_request.messages.pop();
+}
+async fn work_on_stream(mut stream: ChatCompletionResponseStream) -> RegularChatCommandOutput{
+    let listen_result = stream.next().await;
+    dbg!(&listen_result);
+    if let Some(result) = listen_result{
         match result {
             Ok(response) => {
                 for chat_choise in response.choices.iter(){
@@ -525,6 +538,6 @@ async fn get_stream_chunk(mut stream: ChatCompletionResponseStream) -> RegularCh
                 return RegularChatCommandOutput::Failure(err);
             }
         }
-        };
-        return RegularChatCommandOutput::ResponseOver;
+    };
+    return RegularChatCommandOutput::ResponseOver;
 }
