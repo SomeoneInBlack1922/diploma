@@ -73,7 +73,7 @@ impl RelmListItem for Message{
             })
             .hexpand(true)
             .xalign(0.0)
-            .css_classes(["regular_chat-name_label"])
+            .css_classes(["regular_chat-sender_name_label"])
             .build();
 
         let message_text_view = TextView::builder()

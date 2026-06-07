@@ -9,6 +9,8 @@ use relm4::gtk;
 use gtk::prelude::*;
 use crate::ui::navigation::NavigationView;
 use crate::ui::navigation::NavigationOutput;
+use crate::ui::work_area::regular_chat_view::RegularChatInit;
+use crate::ui::work_area::regular_chat_view::RegularChatView;
 use crate::ui::work_area::settings::SettingsInit;
 use crate::ui::work_area::settings::SettingsView;
 use crate::bus::Bus;
@@ -18,7 +20,8 @@ pub struct TopWidgets {
 }
 enum Connectors{
     Empty,
-    Setttings(Connector<SettingsView>)
+    Setttings(Connector<SettingsView>),
+    Chat(Connector<RegularChatView>)
 }
 pub struct TopView{
     bus: Arc<RwLock<Bus>>,
@@ -117,8 +120,21 @@ impl SimpleComponent for TopView{
                         });
                         self.connector = Connectors::Setttings(setting_connector)
                     },
-                    NavigationOutput::Object(_) => {
-                        todo!()
+                    NavigationOutput::Object(fs_object) => {
+                        let regular_chat_builder = RegularChatView::builder();
+                        let regular_chat_root = &regular_chat_builder.root;
+                        
+                        // Remove previous working area
+                        let previous_option = self.working_area.first_child();
+                        if let Some(previous) = previous_option{
+                            self.working_area.remove(&previous);
+                        }
+                        
+                        self.working_area.append(regular_chat_root);
+                        self.connector = Connectors::Chat(regular_chat_builder.launch(RegularChatInit{
+                            bus: self.bus.clone(),
+                            chat_fs_object: fs_object
+                        }));
                     }
                 }
             }

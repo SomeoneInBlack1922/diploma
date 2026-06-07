@@ -8,6 +8,7 @@ const CSS_TOP: &'static str = include_str!("./css/top.css");
 const CSS_LOGO: &'static str = include_str!("./css/logo.css");
 const CSS_NAVIGATION: &'static str = include_str!("./css/navigation.css");
 const CSS_SETTINGS: &'static str = include_str!("./css/settings.css");
+const CSS_REGULAR_CHAT: &'static str = include_str!("./css/regular_chat.css");
 
 const CSS_TOP_LIGHT: &'static str = include_str!("./css/light/top_light.css");
 // const CSS_LOGO_LIGHT: &'static str = include_str!("./css/logo.css");
@@ -30,7 +31,8 @@ impl Css{
         let css = String::from(CSS_TOP) + 
             CSS_LOGO + 
             CSS_NAVIGATION +
-            CSS_SETTINGS;
+            CSS_SETTINGS +
+            CSS_REGULAR_CHAT;
         let css_light = String::from(CSS_TOP_LIGHT) +
             CSS_LOGO +
             CSS_NAVIGATION_LIGHT;

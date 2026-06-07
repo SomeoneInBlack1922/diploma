@@ -1,0 +1,30 @@
+.regular_chat-header{
+    background: rgb(0, 64, 128);
+    border-width: 0;
+    border-bottom-width: 5px;
+    border-style: solid;
+    border-color: rgb(0, 32,64);
+}
+.regular_chat-name_label{
+    font-weight: bold;
+    font-size: 32px;
+}
+.regular_chat-header_separator{
+    background-color: white;
+    min-width: 3px;
+}
+.regular_chat-status_label{
+    font-size: 26px;
+}
+.regular_chat-list{
+    background-color: rgb(0, 64, 64);
+}
+.regular_chat-controls_box *{
+    border-radius: 0;
+}
+.regular_chat-entry-hightlight{
+    border-color: orange;
+}
+.regular_chat-sender_name_label{
+    font-size: 28px;
+}

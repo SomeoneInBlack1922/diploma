@@ -57,9 +57,6 @@
 .navigation-model-select-button-selected{
     background:rgb(255, 128, 0)
 }
-.navigation-object-control-container button{
-    inline-size: 100%;
-}
 .navigation-object-control-new-button{
     background: rgb(0, 0, 128);
 }
