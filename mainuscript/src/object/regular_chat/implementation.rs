@@ -76,11 +76,13 @@ impl RelmListItem for Message{
             .css_classes(["regular_chat-sender_name_label"])
             .build();
 
-        let message_text_view = TextView::builder()
-            .hexpand(true)
-            .css_classes(["regular_chat-text_view"])
+        let message_text_view = GtkLabel::builder()
+            .label(&self.content)
+            .css_classes(["regular_chat-message_text"])
+            .wrap(true)
+            .wrap_mode(gtk::pango::WrapMode::Word)
+            .xalign(0.0)
             .build();
-        message_text_view.buffer().set_text(&self.content);
 
         _root.append(&sener_label);
         _root.append(&message_text_view);

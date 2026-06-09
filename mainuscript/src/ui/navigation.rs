@@ -2,6 +2,7 @@
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
+use std::thread;
 use relm4::component::Connector;
 use relm4::gtk::glib::SignalHandlerId;
 use relm4::gtk::glib::object::ObjectExt;
