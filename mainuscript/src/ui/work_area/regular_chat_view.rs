@@ -299,7 +299,6 @@ impl Component for RegularChatView{
         match message {
             RegularChatInput::SendMessage => {
                 if let Some(data) = &mut self.data{
-                println!("SendMessage entered");
                 let entry_text: String = data.chat_entry.text().into();
                 // If not text is input => stop
                 if entry_text.is_empty(){
@@ -355,12 +354,10 @@ impl Component for RegularChatView{
             }},
             RegularChatInput::StopMessage => {
                 if let Some(data) = &mut self.data{
-                println!("StopMessage");
                 data.message_is_read_from_stream = false;
             }},
             RegularChatInput::SelectedModelUpdated => {
                 if let Some(data) = &mut self.data{
-                println!("SelectedModelUpdated");
                 let bus_ref = data.bus.read().unwrap();
                 match &*bus_ref.config.selected_model_name.get_value_rw_lock().read().unwrap(){
                     Some(_) => {
@@ -381,7 +378,6 @@ impl Component for RegularChatView{
             }},
             RegularChatInput::ResponseOver => {
                 if let Some(data) = &mut self.data{
-                println!("ResponseOver");
                 // Reset cutton and label
                 reset_controls_to_ready(data, sender);
 
@@ -481,7 +477,6 @@ impl Component for RegularChatView{
             // }},
             RegularChatCommandOutput::Failure(err) => {
                 if let Some(data) = &mut self.data{
-                println!("Failure");
                 data.status_label.set_label("Error happened");
                 delete_working_messages(data);
                 dbg!(err);
@@ -505,7 +500,6 @@ impl Component for RegularChatView{
         }
     }
     fn shutdown(&mut self, widgets: &mut Self::Widgets, output: relm4::Sender<Self::Output>) {
-        println!("shutdown");
         if self.is_uninit{
             return;
         }
@@ -543,7 +537,6 @@ fn delete_working_messages(data: &mut RegularChatViewData){
     data.chat_completition_request.messages.pop();
 }
 fn write_last_message_to_all_places(data: &mut RegularChatViewData, content: String){
-    dbg!(format!("Write started with {}", content));
     let new_ai_message = Message{
         author: MessageAuthor::AI(data.selected_model.clone().unwrap()),
         content: content.clone()
