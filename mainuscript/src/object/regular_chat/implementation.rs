@@ -2,9 +2,11 @@ use std::ops::{Deref, DerefMut};
 
 use chrono::TimeZone;
 use relm4::gtk::TextView;
+use relm4::gtk::gdk::Cursor;
 use relm4::gtk::prelude::BoxExt;
 use relm4::gtk::prelude::TextBufferExt;
 use relm4::gtk::prelude::TextViewExt;
+use relm4::gtk::prelude::WidgetExt;
 use relm4::typed_view::list::RelmListItem;
 use relm4::gtk;
 use gtk::Box as GtkBox;
@@ -66,11 +68,12 @@ impl RelmListItem for Message{
         return (chat_box, ())
     }
     fn bind(&mut self, _widgets: &mut Self::Widgets, _root: &mut Self::Root) {
-        let sener_label = GtkLabel::builder()
+        let sender_label = GtkLabel::builder()
             .label(match &self.author{
                 MessageAuthor::AI(model_id) => model_id.clone(),
                 MessageAuthor::User => "User".into()
             })
+            .selectable(true)
             .hexpand(true)
             .xalign(0.0)
             .css_classes(["regular_chat-sender_name_label"])
@@ -79,12 +82,13 @@ impl RelmListItem for Message{
         let message_text_view = GtkLabel::builder()
             .label(&self.content)
             .css_classes(["regular_chat-message_text"])
+            .selectable(true)
             .wrap(true)
             .wrap_mode(gtk::pango::WrapMode::Word)
             .xalign(0.0)
             .build();
 
-        _root.append(&sener_label);
+        _root.append(&sender_label);
         _root.append(&message_text_view);
     }
 }

@@ -30,12 +30,14 @@ use relm4::gtk;
 use gtk::Box as GtkBox;
 use gtk::Label as GtkLabel;
 use gtk::Separator;
+use relm4::gtk::Adjustment;
 use relm4::gtk::Button as GtkButton;
 use relm4::gtk::Entry;
 use relm4::gtk::NoSelection;
 use relm4::gtk::ScrolledWindow;
 use relm4::gtk::glib::SignalHandlerId;
 use relm4::gtk::glib::object::ObjectExt;
+use relm4::gtk::prelude::AdjustmentExt;
 use relm4::gtk::prelude::BoxExt;
 use relm4::gtk::prelude::ButtonExt;
 use relm4::gtk::prelude::EditableExt;
@@ -54,7 +56,6 @@ use crate::object::regular_chat::Message;
 use crate::object::regular_chat::MessageAuthor;
 use crate::object::regular_chat::RegularChat;
 use crate::storage;
-mod regular_message_view;
 
 // struct ChatCompletionRequestMessage {inner: ChatCompletionRequestMessageOriginal}
 // impl Deref for ChatCompletionRequestMessage{
@@ -73,15 +74,19 @@ pub struct RegularChatViewData{
     bus: Arc<RwLock<Bus>>,
     // ai_client_subscription: ConfigSubscription<Option<Client<OpenAIConfig>>>,
     selected_model_subscription: ConfigSubscription<Option<String>>,
-    selected_model: Option<String>,
+    selected_model: String,
     ai_client: Option<Client<OpenAIConfig>>,
     chat_completition_request: CreateChatCompletionRequest,
-    message_is_read_from_stream: bool, // If this is set to fasle listening to AI response will stop
-    model_is_unselected: bool, // This will be set to true is model was unselected while response was listened in
+    /// If this is set to fasle listening to AI response will stop
+    message_is_read_from_stream: bool, 
+    /// Top Option is None when selected model did not change
+    /// Top Option is Some when model was changed
+    /// Internal Option is None when model was unselected
+    /// Internal Option is Some whem model was set to new one
+    model_was_updated: Option<Option<String>>, 
     messages_list: TypedListView<Message, NoSelection>,
     chat_data: RegularChat,
-    chat_fs_object: Arc<FsObject>,
-    current_model_name: String // Name of model that the response in process now used
+    chat_fs_object: Arc<FsObject>
 }
 pub struct RegularChatView{
     data: Option<RegularChatViewData>,
@@ -204,6 +209,7 @@ impl Component for RegularChatView{
             .hexpand(true)
             .hscrollbar_policy(gtk::PolicyType::Never)
             .build();
+
         let mut chat_completition_request = CreateChatCompletionRequest::default();
         chat_completition_request.max_completion_tokens = Some(512u32);
 
@@ -215,6 +221,7 @@ impl Component for RegularChatView{
         }
         // Populate struct for prompting
         messages_list.view.set_css_classes(&["regular_chat-list"]);
+        messages_list.view.set_show_separators(false);
         for message in init_chat.contents.iter(){
         // let message = message_ref.borrow();
             chat_completition_request.messages.push(match &message.author{
@@ -280,15 +287,17 @@ impl Component for RegularChatView{
                     control_button_handler,
                     bus: init.bus,
                     selected_model_subscription,
-                    selected_model: current_selected_model.clone(),
+                    selected_model: match current_selected_model.clone() {
+                        Some(name) => name,
+                        None => String::new()
+                    },
                     chat_completition_request,
                     message_is_read_from_stream: false,
                     ai_client: ai_client_option.clone(),
-                    model_is_unselected: false,
+                    model_was_updated: None,
                     messages_list,
                     chat_data: init_chat,
-                    chat_fs_object: init.chat_fs_object,
-                    current_model_name: String::new()
+                    chat_fs_object: init.chat_fs_object
                 }),
                 is_uninit: false
             },
@@ -325,8 +334,7 @@ impl Component for RegularChatView{
                 ));
 
                 // Put selected model to completion message
-                data.chat_completition_request.model = data.selected_model.clone().unwrap();
-                data.current_model_name = data.selected_model.clone().unwrap();
+                data.chat_completition_request.model = data.selected_model.clone();
 
                 // Change control button function to stopping the ai message
                 let sender_clone = sender.clone();
@@ -359,38 +367,31 @@ impl Component for RegularChatView{
             RegularChatInput::SelectedModelUpdated => {
                 if let Some(data) = &mut self.data{
                 let bus_ref = data.bus.read().unwrap();
-                match &*bus_ref.config.selected_model_name.get_value_rw_lock().read().unwrap(){
-                    Some(_) => {
-                        data.control_button.set_sensitive(true);
-                        data.status_label.set_label("");
-                    },
-                    None => {
-                        if data.message_is_read_from_stream{
-                            data.model_is_unselected = true;
-                        }
-                        else {
-                            data.control_button.set_sensitive(false);
-                            data.status_label.set_label("Model not selected");
-                        }
-                    }
+                let new_model_status = bus_ref.config.selected_model_name.get_value_rw_lock().read().unwrap().clone();
+                drop(bus_ref);
+                if data.message_is_read_from_stream{
+                    data.model_was_updated = Some(new_model_status);
                 }
-                todo!("RegularChatInput::SelectedModelUpdated")
+                else{
+                    handle_unselected_model(new_model_status, data, sender);
+                }
             }},
             RegularChatInput::ResponseOver => {
                 if let Some(data) = &mut self.data{
                 // Reset cutton and label
-                reset_controls_to_ready(data, sender);
+                set_controls_to_ready(data, sender.clone());
 
                 // Set last update to now
                 data.chat_data.last_update_date = chrono::Utc::now().timestamp_micros();
                 
                 
                 // If model was unselected while previous response was listened in disable controls now
-                if data.model_is_unselected{
-                    data.control_button.set_sensitive(false);
-                    data.status_label.set_label("Model not selected");
+                if let Some(model_update) = data.model_was_updated.clone(){
+                    handle_unselected_model(model_update, data, sender);
+                    data.model_was_updated = None;
                 }
-
+                
+                
                 data.message_is_read_from_stream = false;
             }}
             // RegularChatInput::AiClientUpdated => {
@@ -421,7 +422,7 @@ impl Component for RegularChatView{
                 else{
                     delete_working_messages(data);
                     data.status_label.set_label("Stopped listening");
-                    reset_controls_to_ready(data, sender);
+                    set_controls_to_ready(data, sender);
                 }
                 
             }},
@@ -538,7 +539,7 @@ fn delete_working_messages(data: &mut RegularChatViewData){
 }
 fn write_last_message_to_all_places(data: &mut RegularChatViewData, content: String){
     let new_ai_message = Message{
-        author: MessageAuthor::AI(data.selected_model.clone().unwrap()),
+        author: MessageAuthor::AI(data.selected_model.clone()),
         content: content.clone()
     };
     data.messages_list.append(new_ai_message.clone());
@@ -547,19 +548,39 @@ fn write_last_message_to_all_places(data: &mut RegularChatViewData, content: Str
         ChatCompletionRequestMessage::Assistant(
             ChatCompletionRequestAssistantMessageArgs::default()
                 .content(content)
-                .name(data.current_model_name.clone())
+                .name(data.selected_model.clone())
                 .build().unwrap()
         )
     );
 }
-fn reset_controls_to_ready(data: &mut RegularChatViewData, sender: ComponentSender<RegularChatView>){
+fn set_controls_to_ready(data: &mut RegularChatViewData, sender: ComponentSender<RegularChatView>){
     data.control_button.set_label("=>");
+    data.control_button.set_sensitive(true);
     data.status_label.set_label("");
+    data.chat_entry.set_sensitive(true);
     let new_handler = data.control_button.connect_clicked(move |_|{
         sender.input(RegularChatInput::SendMessage);
     });
     let old_handler = std::mem::replace(&mut data.control_button_handler, new_handler);
     data.control_button.disconnect(old_handler);
+}
+fn set_controls_to_not_ready(data: &mut RegularChatViewData, status_message: &str){
+    data.control_button.set_label("=>");
+    data.control_button.set_sensitive(false);
+    data.status_label.set_label(status_message);
+    data.chat_entry.set_sensitive(false);
+}
+fn handle_unselected_model(new_model_status: Option<String>, data: &mut RegularChatViewData, sender: ComponentSender<RegularChatView>){
+    match  new_model_status{
+        Some(new_name) => {
+            set_controls_to_ready(data, sender);
+            data.selected_model = new_name;
+        },
+        None => {
+            set_controls_to_not_ready(data, "Model is not selelected");
+        }
+    }
+    data.model_was_updated = None;
 }
 // async fn work_on_stream(mut pair: ClientStreamPair) -> RegularChatCommandOutput{
 //     let listen_result = pair.stream.next().await;
